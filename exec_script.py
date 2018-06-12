@@ -1,6 +1,5 @@
 from dendrocat import *
 
-infilename = 'w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits'
-outfilename = 'cores.reg'
+infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'
 
-contour(infilename, outfilename, min_value=0.001, min_delta=0.002)
+contour(infilename, min_value=0.001, min_delta=0.002)

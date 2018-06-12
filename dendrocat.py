@@ -11,14 +11,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def contour(infile, outfile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True):
+def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True):
     
-    outfile, outfileext = os.path.splitext(outfile)
-    
-    contfile = fits.open(infile)
-    da = contfile[0].data.squeeze()
+    outfile = 'dend_val{}_delt{}_pix{}'.format(min_value, min_delta, min_npix)
+    contfile = fits.open(infile)                        # load in fits image
+    da = contfile[0].data.squeeze()                     # get rid of extra axes
 
-    mywcs = wcs.WCS(contfile[0].header).celestial
+    mywcs = wcs.WCS(contfile[0].header).celestial       # set up world coordinate system, ditch extra dimensions
     beam = radio_beam.Beam.from_fits_header(contfile[0].header)
 
     d = Dendrogram.compute(da, min_value=min_value, min_delta=min_delta, min_npix=min_npix, wcs=mywcs, verbose=True)
@@ -35,14 +34,15 @@ def contour(infile, outfile, min_value=0.0001, min_delta=0.0002, min_npix=10, pl
             'wcs':mywcs,
             }
 
-    cat = pp_catalog(d, metadata)
-    cat.pprint(show_unit=True, max_lines=10)
-    with open(outfile+'.reg', 'w') as fh:
+    cat = pp_catalog(d, metadata)                       # set up position-position catalog
+    cat.pprint(show_unit=True, max_lines=10)            # display to check values
+    
+    with open('./reg/reg_'+outfile+'.reg', 'w') as fh:               # write catalog information to region file
 	    fh.write("fk5\n")
 	    for row in cat:
 	        fh.write("ellipse({x_cen}, {y_cen}, {major_sigma}, {minor_sigma}, {position_angle}) # text={{{_idx}}}\n".format(**dict(zip(row.colnames, row))))
 
-    if plot:
+    if plot:                                            # create PDF plots of contour regions, if enabled
         ax = plt.gca()
         ax.cla()
         plt.imshow(da, cmap='gray_r', interpolation='none', origin='lower',
@@ -50,7 +50,7 @@ def contour(infile, outfile, min_value=0.0001, min_delta=0.0002, min_npix=10, pl
         pltr = d.plotter()
         print("Plotting contours to PDF...")
         pb = ProgressBar(len(d.leaves))
-        for struct in d.leaves:
+        for struct in d.leaves:                         # iterate over each of the leaf structures
             pltr.plot_contour(ax, structure=struct, colors=['r'],
                               linewidths=[0.9], zorder=5)
             if struct.parent:
@@ -63,11 +63,11 @@ def contour(infile, outfile, min_value=0.0001, min_delta=0.0002, min_npix=10, pl
 
         plt.setp([x for x in cntr if x.get_color()[0,0] == 1], linewidth=0.25)
         plt.setp([x for x in cntr if x.get_color()[0,1] == 1], linewidth=0.25)
-        plt.savefig('{2}_dend_contour_{0}_{1}.pdf'.format(min_value, min_delta, outfile))
+        plt.savefig('./contour/contour_'+outfile+'.pdf')
         plt.axis((1125.4006254228616, 1670.3650637799306,
                  1291.6829155596627, 1871.8063499397681))
         plt.setp([x for x in cntr if x.get_color()[0,0] == 1], linewidth=0.75) # Red
         plt.setp([x for x in cntr if x.get_color()[0,1] == 1], linewidth=0.5) # Green
-        plt.savefig('{2}_dend_contour_{0}_{1}_zoom.pdf'.format(min_value, min_delta, outfile))
+        plt.savefig('./contour/contour_'+outfile+'zoom.pdf')
 
 

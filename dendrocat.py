@@ -3,12 +3,17 @@ from astropy.utils.console import ProgressBar
 import os
 from astrodendro import Dendrogram, pp_catalog
 from astropy import units as u
+from photutils import aperture_photometry, CircularAperture, CircularAnnulus
 import radio_beam
 from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
+
+
+def rms(x):
+    return (np.absolute(np.mean(x**2) - (np.mean(x))**2))**0.5
 
 
 def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, verbose=True):
@@ -75,5 +80,29 @@ def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, 
         plt.setp([x for x in cntr if x.get_color()[0,0] == 1], linewidth=0.75) # Red
         plt.setp([x for x in cntr if x.get_color()[0,1] == 1], linewidth=0.5) # Green
         plt.savefig('./contour/contour_'+outfile+'zoom.pdf')
+        
+
+def bgrms(data, regfile):
+    rows = np.loadtxt(regfile, dtype=str, skiprows=1, delimiter=' # text={*}')
+    for i in range(len(rows)):
+        s = rows[i][8:-2]          # trim to just numbers for all the ellipses
+        coords = s.split(', ')     # split string into a list of ellipse coordinates
+        
+        # ELLIPSE PARAMETERS
+        x_cen = coords[0]
+        y_cen = coords[1]
+        major_sigma = coords[2]
+        minor_sigma = coords[3]
+        position_angle = coords[4]
+        
+        # Measure background RMS within a circular annulus, record it and determine source significance
+        #annulus_aperture = CircularAnnulus((x_cen, y_cen), r_in=major_sigma, r_out=major_sigma+15.)
+        #bg_sum = aperture_photometry(data, annulus_aperture)[0]['aperture_sum']
+        #bg_mean = bg_sum / annulus_aperture.area()
+        #bg_rms = rms(bg_mean) 
+        # This can only return the aperture sum within the annulus, not information about each pixel necessary to calculate RMS. 
+        
+        # Add circular annulus coordinates to a new region file
+        # annulus(x, y, r_inner, r_outer)
 
 

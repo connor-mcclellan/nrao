@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, verbose=True):
     
-    outfile = 'dend_val{:.2E}_delt{:.2E}_pix{}'.format(min_value, min_delta, min_npix).replace("E-0", "E-")
+    outfile = 'dend_val{:.5g}_delt{:.5g}_pix{}'.format(min_value, min_delta, min_npix)
     contfile = fits.open(infile)                        # load in fits image
     da = contfile[0].data.squeeze()                     # get rid of extra axes
 

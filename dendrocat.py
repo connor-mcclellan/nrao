@@ -3,7 +3,8 @@ from astropy.utils.console import ProgressBar
 import os
 from astrodendro import Dendrogram, pp_catalog
 from astropy import units as u
-from photutils import aperture_photometry, CircularAperture, CircularAnnulus
+from astropy import coordinates
+from astropy.nddata.utils import Cutout2D
 import radio_beam
 from astropy import wcs
 import numpy as np
@@ -82,27 +83,69 @@ def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, 
         plt.savefig('./contour/contour_'+outfile+'zoom.pdf')
         
 
-def bgrms(data, regfile):
+def bgrms(infile, regfile):
+    
+    contfile = fits.open(infile)                        
+    data = contfile[0].data.squeeze()                   
+    mywcs = wcs.WCS(contfile[0].header).celestial
+    outfile = os.path.basename(regfile)[4:-4]
     rows = np.loadtxt(regfile, dtype=str, skiprows=1, delimiter=' # text={*}')
+    
+    if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
+        os.remove('./reg/reg_'+outfile+'_annulus.reg')
+    
+    print('Calculating RMS values within aperture annuli...')
+    pb = ProgressBar(len(rows))
+    
     for i in range(len(rows)):
-        s = rows[i][8:-2]          # trim to just numbers for all the ellipses
-        coords = s.split(', ')     # split string into a list of ellipse coordinates
+        s = rows[i][8:-2]                                   # trim to just numbers for all the ellipses
+        coords = np.asarray(s.split(', '), dtype=float)     # split string into a list of ellipse coordinates
         
         # ELLIPSE PARAMETERS
-        x_cen = coords[0]
-        y_cen = coords[1]
-        major_sigma = coords[2]
-        minor_sigma = coords[3]
-        position_angle = coords[4]
+        x_cen = coords[0] #* u.deg
+        y_cen = coords[1] #* u.deg
+        major_sigma = coords[2] #* u.deg
+        minor_sigma = coords[3] #* u.deg
+        position_angle = coords[4] #* u.deg
         
-        # Measure background RMS within a circular annulus, record it and determine source significance
-        #annulus_aperture = CircularAnnulus((x_cen, y_cen), r_in=major_sigma, r_out=major_sigma+15.)
-        #bg_sum = aperture_photometry(data, annulus_aperture)[0]['aperture_sum']
-        #bg_mean = bg_sum / annulus_aperture.area()
-        #bg_rms = rms(bg_mean) 
-        # This can only return the aperture sum within the annulus, not information about each pixel necessary to calculate RMS. 
+        # Convert ellipse parameters to pixel values        
+        x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
+        pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 #* u.deg / u.pix
+        pix_major_axis = major_sigma/pixel_scale
+        
+        # Cutout section of the image we care about, to speed up computation time
+        size = major_sigma*2.2*u.deg
+        position = coordinates.SkyCoord(x_cen, y_cen, frame='fk5', unit=(u.deg,u.deg))
+        cutout = Cutout2D(data, position, size, mywcs, mode='partial')
+        
+        yy,xx = np.indices(cutout.data.shape)
+        xcp, ycp = cutout.wcs.wcs_world2pix(position.ra.deg, position.dec.deg, 0)
+        rgrid = ((yy-ycp)**2+(xx-xcp)**2)**0.5
+        
+        # Measure background RMS within a circular annulus
+        annulus_width = 15 #* u.pix
+        n = rgrid.shape[0]
+        mask = np.zeros((n, n), dtype=bool)
+        y, x = np.ogrid[-y_pix:n-y_pix, -x_pix:n-x_pix]
+        inner_mask = x**2. + y**2. <= pix_major_axis**2
+        outer_mask = x**2. + y**2. <= (pix_major_axis+annulus_width)**2
+        
+        mask[outer_mask] = 1
+        mask[inner_mask] = 0
+        
+        # Checking the positions of the masks
+        #plt.imshow(mask, origin='lower', cmap='gray')
+        #plt.show()
+        
+        pix_locs = np.where(mask == 1)
+        pix_values = data[pix_locs[1], pix_locs[0]]
+        bg_rms = rms(pix_values)
         
         # Add circular annulus coordinates to a new region file
-        # annulus(x, y, r_inner, r_outer)
+        with open('./reg/reg_'+outfile+'_annulus.reg', 'a') as fh:  # write catalog information to region file
+            if i == 0:
+	            fh.write("fk5\n")
+            fh.write("annulus({}, {}, {}, {}) # text={{RMS: {:.1E}}}\n".format(x_cen, y_cen, major_sigma, major_sigma+annulus_width*pixel_scale, bg_rms))
+        pb.update()
 
 

@@ -108,25 +108,24 @@ def bgrms(infile, regfile):
         minor_sigma = coords[3] #* u.deg
         position_angle = coords[4] #* u.deg
         
+        annulus_width = 15 #* u.pix
+        
         # Convert ellipse parameters to pixel values        
         x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
         pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 #* u.deg / u.pix
         pix_major_axis = major_sigma/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
-        size = major_sigma*2.2*u.deg
+        size = (major_sigma+annulus_width*pixel_scale)*2.2*u.deg
         position = coordinates.SkyCoord(x_cen, y_cen, frame='fk5', unit=(u.deg,u.deg))
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
-        
-        yy,xx = np.indices(cutout.data.shape)
-        xcp, ycp = cutout.wcs.wcs_world2pix(position.ra.deg, position.dec.deg, 0)
-        rgrid = ((yy-ycp)**2+(xx-xcp)**2)**0.5
+        xx, yy = cutout.center_cutout   # Start using cutout coordinates
         
         # Measure background RMS within a circular annulus
-        annulus_width = 15 #* u.pix
-        n = rgrid.shape[0]
-        mask = np.zeros((n, n), dtype=bool)
-        y, x = np.ogrid[-y_pix:n-y_pix, -x_pix:n-x_pix]
+        
+        n = cutout.shape[0]
+        mask = np.zeros(cutout.shape, dtype=bool)
+        y, x = np.ogrid[-yy:n-yy, -xx:n-xx]
         inner_mask = x**2. + y**2. <= pix_major_axis**2
         outer_mask = x**2. + y**2. <= (pix_major_axis+annulus_width)**2
         
@@ -134,7 +133,8 @@ def bgrms(infile, regfile):
         mask[inner_mask] = 0
         
         # Checking the positions of the masks
-        #plt.imshow(mask, origin='lower', cmap='gray')
+        #plt.imshow(cutout.data, origin='lower')
+        #plt.imshow(mask, origin='lower', cmap='gray', alpha=0.1)
         #plt.show()
         
         pix_locs = np.where(mask == 1)

@@ -2,9 +2,10 @@ from dendrocat import *
 
 infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'
 
-min_values = np.linspace(0.0002, 0.00035, 2)
-min_deltas = min_values*1.5
-min_npixs = [7.5, 10]
+#min_values = np.linspace(0.0002, 0.00035, 2)
+min_values = np.array([0.00033])
+min_deltas = min_values*1.7
+min_npixs = [5, 7.5, 10]
 
 print("Min values: ", min_values)
 print("Min deltas: ", min_deltas)

@@ -9,6 +9,8 @@ import radio_beam
 from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
+import matplotlib.gridspec as gs
+from copy import deepcopy
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -16,8 +18,22 @@ warnings.filterwarnings('ignore')
 def rms(x):
     return (np.absolute(np.mean(x**2) - (np.mean(x))**2))**0.5
 
-
-def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, verbose=True):
+def plot_grid(datacube, masks, names):
+    n_images = len(datacube)
+    xplots = int(np.around(np.sqrt(n_images)))
+    yplots = xplots + 1
+    gs1 = gs.GridSpec(yplots, xplots, wspace=0.0, hspace=0.0, top=1.-0.5/(xplots+1), bottom=0.5/(xplots+1), left=0.5/(yplots+1), right=1-0.5/(yplots+1))
+    plt.figure(figsize=(9.5, 10))
+    for i in range(n_images):
+        image = datacube[i]
+        plt.subplot(gs1[i])
+        plt.imshow(image, origin='lower')
+        plt.imshow(masks[i], origin='lower', cmap='gray', alpha=0.2)
+        plt.text(0, 0, names[i], fontsize=8, color='w')
+        plt.xticks([])
+        plt.yticks([])
+    
+def contour(infile, min_value=0.00035, min_delta=0.000525, min_npix=10, plot=True, verbose=True):
     
     outfile = 'dend_val{:.5g}_delt{:.5g}_pix{}'.format(min_value, min_delta, min_npix)
     contfile = fits.open(infile)                        # load in fits image
@@ -83,7 +99,7 @@ def contour(infile, min_value=0.0001, min_delta=0.0002, min_npix=10, plot=True, 
         plt.savefig('./contour/contour_'+outfile+'zoom.pdf')
         
 
-def bgrms(infile, regfile):
+def reject(infile, regfile):
     
     contfile = fits.open(infile)                        
     data = contfile[0].data.squeeze()                   
@@ -91,11 +107,18 @@ def bgrms(infile, regfile):
     outfile = os.path.basename(regfile)[4:-4]
     rows = np.loadtxt(regfile, dtype=str, skiprows=1, delimiter=' # text={*}')
     
+    min_value = outfile.split('val', 1)[1].split('_delt')[0]
+    min_delta = outfile.split('delt', 1)[1].split('_pix')[0]
+    min_npix = outfile.split('pix', 1)[1]
+    
     if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
         os.remove('./reg/reg_'+outfile+'_annulus.reg')
     
     print('Calculating RMS values within aperture annuli...')
     pb = ProgressBar(len(rows))
+    
+    data_cube = []
+    masks = []
     
     for i in range(len(rows)):
         s = rows[i][8:-2]                                   # trim to just numbers for all the ellipses
@@ -109,6 +132,7 @@ def bgrms(infile, regfile):
         position_angle = coords[4] #* u.deg
         
         annulus_width = 15 #* u.pix
+        center_distance = 20 #* u.pix
         
         # Convert ellipse parameters to pixel values        
         x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
@@ -116,36 +140,47 @@ def bgrms(infile, regfile):
         pix_major_axis = major_sigma/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
-        size = (major_sigma+annulus_width*pixel_scale)*2.2*u.deg
-        position = coordinates.SkyCoord(x_cen, y_cen, frame='fk5', unit=(u.deg,u.deg))
+        size = ((center_distance+annulus_width)*pixel_scale+major_sigma)*2.2*u.deg
+        position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
         xx, yy = cutout.center_cutout   # Start using cutout coordinates
         
         # Measure background RMS within a circular annulus
-        
         n = cutout.shape[0]
         mask = np.zeros(cutout.shape, dtype=bool)
         y, x = np.ogrid[-yy:n-yy, -xx:n-xx]
-        inner_mask = x**2. + y**2. <= pix_major_axis**2
-        outer_mask = x**2. + y**2. <= (pix_major_axis+annulus_width)**2
+        inner_mask = x**2. + y**2. <= (center_distance+pix_major_axis)**2
+        outer_mask = x**2. + y**2. <= (center_distance+pix_major_axis+annulus_width)**2
+        circ_mask = x**2. + y**2. <= pix_major_axis**2
         
         mask[outer_mask] = 1
         mask[inner_mask] = 0
         
-        # Checking the positions of the masks
-        #plt.imshow(cutout.data, origin='lower')
-        #plt.imshow(mask, origin='lower', cmap='gray', alpha=0.1)
-        #plt.show()
+        # Plots of annulus regions
+        data_cube.append(cutout.data)
+        graph_mask = deepcopy(mask)
+        graph_mask[circ_mask] = 1
+        masks.append(graph_mask)
         
-        pix_locs = np.where(mask == 1)
-        pix_values = data[pix_locs[1], pix_locs[0]]
-        bg_rms = rms(pix_values)
+        # Calculate the RMS within the annulus region
+        bg_rms = rms(data[np.where(mask == 1)])
+        
+        # Find peak flux within center circle
+        mask[:,:] = 0
+        circ_mask = x**2. + y**2. <= pix_major_axis**2
+        mask[circ_mask] = 1
+        peak_flux = np.max(data[np.where(mask == 1)])
+        
+        flux_rms_ratio = peak_flux / bg_rms
         
         # Add circular annulus coordinates to a new region file
         with open('./reg/reg_'+outfile+'_annulus.reg', 'a') as fh:  # write catalog information to region file
             if i == 0:
-	            fh.write("fk5\n")
-            fh.write("annulus({}, {}, {}, {}) # text={{RMS: {:.1E}}}\n".format(x_cen, y_cen, major_sigma, major_sigma+annulus_width*pixel_scale, bg_rms))
+	            fh.write("icrs\n")
+            fh.write("annulus({}, {}, {}, {}) # text={{#{}PF/RMS: {:.1E}}}\n".format(x_cen, y_cen, center_distance*pixel_scale+major_sigma, pixel_scale*(center_distance+annulus_width)+major_sigma, i, flux_rms_ratio))
+        
         pb.update()
-
+    plot_grid(data_cube, masks, range(len(rows)))
+    plt.suptitle('Source and Background Annulus Regions for val={}, delt={}, pix={}'.format(min_value, min_delta, min_npix))
+    plt.show()
 

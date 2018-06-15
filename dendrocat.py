@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')
 def rms(x):
     return (np.absolute(np.mean(x**2) - (np.mean(x))**2))**0.5
 
-def plot_grid(datacube, masks, names):
+def plot_grid(datacube, masks, rejects, snr_vals, names):
     n_images = len(datacube)
     xplots = int(np.around(np.sqrt(n_images)))
     yplots = xplots + 1
@@ -27,9 +27,12 @@ def plot_grid(datacube, masks, names):
     for i in range(n_images):
         image = datacube[i]
         plt.subplot(gs1[i])
-        plt.imshow(image, origin='lower')
+        if rejects[i]:
+            plt.imshow(image, origin='lower', cmap='gray')
+        else:
+            plt.imshow(image, origin='lower')
         plt.imshow(masks[i], origin='lower', cmap='gray', alpha=0.2)
-        plt.text(0, 0, names[i], fontsize=8, color='w')
+        plt.text(0, 0, '{}  SN {:.1f}'.format(names[i], snr_vals[i]), fontsize=7, color='w')
         plt.xticks([])
         plt.yticks([])
     
@@ -104,24 +107,29 @@ def reject(infile, regfile):
     contfile = fits.open(infile)                        
     data = contfile[0].data.squeeze()                   
     mywcs = wcs.WCS(contfile[0].header).celestial
-    outfile = os.path.basename(regfile)[4:-4]
+    outfile = os.path.basename(regfile).split('reg_')[1].split('.reg')[0]
     rows = np.loadtxt(regfile, dtype=str, skiprows=1, delimiter=' # text={*}')
     
-    min_value = outfile.split('val', 1)[1].split('_delt')[0]
-    min_delta = outfile.split('delt', 1)[1].split('_pix')[0]
-    min_npix = outfile.split('pix', 1)[1]
+    min_value = outfile.split('val')[1].split('_delt')[0]
+    min_delta = outfile.split('delt')[1].split('_pix')[0]
+    min_npix = outfile.split('pix')[1]
     
     if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
         os.remove('./reg/reg_'+outfile+'_annulus.reg')
+    if os.path.isfile('./reg/reg_'+outfile+'_filtered.reg'):
+        os.remove('./reg/reg_'+outfile+'_filtered.reg')
     
     print('Calculating RMS values within aperture annuli...')
     pb = ProgressBar(len(rows))
     
     data_cube = []
     masks = []
+    rejects = []
+    snr_vals = []
+    rejection_threshold = 7.
     
     for i in range(len(rows)):
-        s = rows[i][8:-2]                                   # trim to just numbers for all the ellipses
+        s = rows[i].split('ellipse(')[1].split(') ')[0]                                   # trim to just numbers for all the ellipses
         coords = np.asarray(s.split(', '), dtype=float)     # split string into a list of ellipse coordinates
         
         # ELLIPSE PARAMETERS
@@ -132,7 +140,7 @@ def reject(infile, regfile):
         position_angle = coords[4] #* u.deg
         
         annulus_width = 15 #* u.pix
-        center_distance = 20 #* u.pix
+        center_distance = 10 #* u.pix
         
         # Convert ellipse parameters to pixel values        
         x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
@@ -163,24 +171,41 @@ def reject(infile, regfile):
         masks.append(graph_mask)
         
         # Calculate the RMS within the annulus region
-        bg_rms = rms(data[np.where(mask == 1)])
+        bg_rms = rms(cutout.data[np.where(mask == 1)])
         
         # Find peak flux within center circle
         mask[:,:] = 0
         circ_mask = x**2. + y**2. <= pix_major_axis**2
         mask[circ_mask] = 1
-        peak_flux = np.max(data[np.where(mask == 1)])
+        peak_flux = np.max(cutout.data[np.where(mask == 1)])
         
         flux_rms_ratio = peak_flux / bg_rms
+        snr_vals.append(flux_rms_ratio)
+        
+        # Reject bad sources below some SNR threshold
+        rejected = False
+        if flux_rms_ratio <= rejection_threshold:     # How should we determine this threshold? How does it relate to a source being a <some number> sigma detection?
+            rejected = True
+        rejects.append(rejected)
         
         # Add circular annulus coordinates to a new region file
         with open('./reg/reg_'+outfile+'_annulus.reg', 'a') as fh:  # write catalog information to region file
             if i == 0:
 	            fh.write("icrs\n")
-            fh.write("annulus({}, {}, {}, {}) # text={{#{}PF/RMS: {:.1E}}}\n".format(x_cen, y_cen, center_distance*pixel_scale+major_sigma, pixel_scale*(center_distance+annulus_width)+major_sigma, i, flux_rms_ratio))
-        
+            fh.write("annulus({}, {}, {}, {}) # text={{#{} SNR: {:.1f}}}\n".format(x_cen, y_cen, center_distance*pixel_scale+major_sigma, pixel_scale*(center_distance+annulus_width)+major_sigma, i, flux_rms_ratio))
+            
+        # Add non-rejected source ellipses to a new region file
+        if not rejected:
+            fname = './reg/reg_'+outfile+'_filtered.reg'
+            with open(fname, 'a') as fh:  # write catalog information to region file
+                if os.stat(fname).st_size == 0:
+	                fh.write("icrs\n")
+                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen, y_cen, major_sigma, minor_sigma, position_angle, i))
+            
         pb.update()
-    plot_grid(data_cube, masks, range(len(rows)))
-    plt.suptitle('Source and Background Annulus Regions for val={}, delt={}, pix={}'.format(min_value, min_delta, min_npix))
+        
+    # Plot the grid of sources
+    plot_grid(data_cube, masks, rejects, snr_vals, range(len(rows)))
+    plt.suptitle('min_value={}, min_delta={}, min_npix={}, rejection_threshold={}'.format(min_value, min_delta, min_npix, rejection_threshold))
     plt.show()
 

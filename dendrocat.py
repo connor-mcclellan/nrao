@@ -126,7 +126,13 @@ def reject(infile, regfile):
     masks = []
     rejects = []
     snr_vals = []
-    rejection_threshold = 7.
+    rejection_threshold = 3.51e4*rms(data)      # This may need some adjustment. Lower RMS means less noise, and so more sources should be accepted since they're less likely to be noise.
+    
+    # Load in manually accepted sources
+    accepted = []
+    if os.path.isfile('./override/'+outfile+'_override.txt'):
+        accepted = np.loadtxt('./override/'+outfile+'_override.txt')
+    print "Manually accepted sources: ", accepted
     
     for i in range(len(rows)):
         s = rows[i].split('ellipse(')[1].split(') ')[0]                                   # trim to just numbers for all the ellipses
@@ -185,7 +191,8 @@ def reject(infile, regfile):
         # Reject bad sources below some SNR threshold
         rejected = False
         if flux_rms_ratio <= rejection_threshold:     # How should we determine this threshold? How does it relate to a source being a <some number> sigma detection?
-            rejected = True
+            if i not in accepted:
+                rejected = True
         rejects.append(rejected)
         
         # Add circular annulus coordinates to a new region file
@@ -206,6 +213,17 @@ def reject(infile, regfile):
         
     # Plot the grid of sources
     plot_grid(data_cube, masks, rejects, snr_vals, range(len(rows)))
-    plt.suptitle('min_value={}, min_delta={}, min_npix={}, rejection_threshold={}'.format(min_value, min_delta, min_npix, rejection_threshold))
+    plt.suptitle('min_value={}, min_delta={}, min_npix={}, rejection_threshold={:.4f}'.format(min_value, min_delta, min_npix, rejection_threshold))
+    print('Input a comma-separated list of sources to manually accept, then close the plot window. ')
     plt.show()
 
+    overrides = input("\nPress enter to confirm the above. ").split(', ')
+    print(overrides)
+    
+    fname = './override/'+outfile+'_override.txt'
+    with open(fname, 'a') as fh:
+        for num in overrides:
+            fh.write('\n'+str(num))
+    print("Manual overrides written to './override/"+outfile+"_override.txt'. New overrides will take effect the next time the rejection script is run.")
+    
+    

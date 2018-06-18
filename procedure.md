@@ -1,4 +1,4 @@
-# Source Detectionm, Rejection, and Flux Measurement Procedure
+# Source Detection, Rejection, and Flux Measurement Procedure
 
 ### Source Detection
  - Locate image file

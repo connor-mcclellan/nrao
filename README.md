@@ -4,8 +4,6 @@
  - [X] Define annulus regions around sources, calculate pixel RMS within those regions
  - [X] Compare annulus RMS with peak flux in the center
  - [X] Reject bad sources, create new region file with only good ones
- - [ ] Add histogram of SNRs for all sources to plot, highlight those rejected
- - [ ] Use 2x smoothed images to reject bad sources using peak flux comparison on PSFs (still doing this...?)
  - [ ] Create system for tracking sources between images, so that flux measurements can be made across bands
  - [ ] Create flux histograms for all cataloged sources
 

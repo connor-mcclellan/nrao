@@ -10,6 +10,7 @@
  - [ ] Add columns to dendrogram catalog for circular aperture sum, elliptical aperture sum, dendrogram contour sum
  - [ ] Use union of detected sources between images to create source IDs, so that flux measurements can be made consistently across bands
  - [ ] Create flux histograms for all cataloged sources, across all three bands
+ - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs
  - SNR for noise is higher than actual sources

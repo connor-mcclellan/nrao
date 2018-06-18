@@ -18,3 +18,4 @@
      - [SOLVED] When finding the peak flux, the whole image was being searched as opposed to the cutout region. Still, the image mask should have restricted those values anyway, so this might need some more looking into.
  - Lots of overlapping dendrogram regions (maybe this is ok?)
      - [SOLVED] Use only dendrogram leaves, not branches or trunks.
+ - Aperture sum for circular apertures is a factor of 100x larger than for dendrogram contour apertures

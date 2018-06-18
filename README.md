@@ -4,8 +4,8 @@
  - [X] Define annulus regions around sources, calculate pixel RMS within those regions
  - [X] Compare annulus RMS with peak flux in the center
  - [X] Reject bad sources, create new region file with only good ones
- - [ ] Constrain source detection to only dendrogram leaves
- - [ ] Use dendrogram catalog instead of region file for data handling between scripts
+ - [X] Constrain source detection to only dendrogram leaves
+ - [X] Use dendrogram catalog instead of region file for data handling between scripts
  - [ ] Multiply ellipse dimensions by 2.35 to convert to FWHM instead of sigma
  - [ ] Add columns to dendrogram catalog for circular aperture sum, elliptical aperture sum, dendrogram contour sum
  - [ ] Use union of detected sources between images to create source IDs, so that flux measurements can be made consistently across bands

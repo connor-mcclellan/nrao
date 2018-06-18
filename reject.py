@@ -3,7 +3,7 @@ from astropy.utils.console import ProgressBar
 import os
 from astropy import units as u
 from astropy import coordinates
-from astropy.table import Table
+from astropy.table import Table, Column
 from astropy.nddata.utils import Cutout2D
 from astropy import wcs
 import numpy as np
@@ -43,14 +43,15 @@ def reject(imfile, catfile, threshold):
     masks = []
     rejects = []
     snr_vals = []
+    circ_sums = []
     
     for i in range(len(catalog)):
         x_cen = catalog['x_cen'][i]
         y_cen = catalog['y_cen'][i]
-        major_sigma = catalog['major_sigma'][i]
-        minor_sigma = catalog['minor_sigma'][i]
+        major_fwhm = catalog['major_fwhm'][i]
+        minor_fwhm = catalog['minor_fwhm'][i]
         position_angle = catalog['position_angle'][i]
-        dend_flux = catalog['flux'][i]
+        dend_flux = catalog['dend_flux'][i]
         
         annulus_width = 15 #* u.pix
         center_distance = 10 #* u.pix
@@ -58,10 +59,10 @@ def reject(imfile, catfile, threshold):
         # Convert ellipse parameters to pixel values        
         x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
         pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 #* u.deg / u.pix
-        pix_major_axis = major_sigma/pixel_scale
+        pix_major_axis = major_fwhm/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
-        size = ((center_distance+annulus_width)*pixel_scale+major_sigma)*2.2*u.deg
+        size = ((center_distance+annulus_width)*pixel_scale+major_fwhm)*2.2*u.deg
         position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
         xx, yy = cutout.center_cutout   # Start using cutout coordinates
@@ -91,9 +92,12 @@ def reject(imfile, catfile, threshold):
         circ_mask = x**2. + y**2. <= pix_major_axis**2
         mask[circ_mask] = 1
         peak_flux = np.max(cutout.data[np.where(mask == 1)])
-        
         flux_rms_ratio = peak_flux / bg_rms
         snr_vals.append(flux_rms_ratio)
+        
+        # Sum the flux within the circular aperture
+        circ_sum = np.sum(cutout.data[np.where(mask == 1)])
+        circ_sums.append(circ_sum)
         
         # Reject bad sources below some SNR threshold
         rejected = False
@@ -102,20 +106,13 @@ def reject(imfile, catfile, threshold):
                 rejected = True
         rejects.append(rejected)
         
-        # Add circular annulus coordinates to a new region file
-        # with open('./reg/reg_'+outfile+'_annulus.reg', 'a') as fh:  # write catalog information to region file
-        #     if i == 0:
-	    #         fh.write("icrs\n")
-        #     fh.write("annulus({}, {}, {}, {}) # text={{#{} SNR: {:.1f}}}\n".format(x_cen, y_cen, center_distance*pixel_scale+major_sigma, pixel_scale*(center_distance+annulus_width)+major_sigma, i, flux_rms_ratio))
-            
         # Add non-rejected source ellipses to a new region file
-        if not rejected:
-            fname = './reg/reg_'+outfile+'_filtered.reg'
-            with open(fname, 'a') as fh:  # write catalog information to region file
-                if os.stat(fname).st_size == 0:
-	                fh.write("icrs\n")
-                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen, y_cen, major_sigma, minor_sigma, position_angle, i))
-            
+        fname = './reg/reg_'+outfile+'_filtered.reg'
+        with open(fname, 'a') as fh:  # write catalog information to region file
+            if os.stat(fname).st_size == 0:
+                fh.write("icrs\n")
+            if not rejected:
+                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen, y_cen, major_fwhm, minor_fwhm, position_angle, i))
         pb.update()
         
     # Plot the grid of sources
@@ -127,15 +124,24 @@ def reject(imfile, catfile, threshold):
     overrides = input("\nPress enter to confirm the above. ").split(', ')
     print(overrides)
     
+    # Save the manually accepted sources
     fname = './override/override_'+outfile+'.txt'
     with open(fname, 'a') as fh:
         for num in overrides:
             fh.write('\n'+str(num))
     print("Manual overrides written to './override/override_"+outfile+".txt'. New overrides will take effect the next time the rejection script is run.")
     
+    # Save the filtered catalog with new columns for circular aperture flux sum and SNR
+    catalog.remove_rows(rejects)
+    circ_sums = [s for s in circ_sums if not rejects[circ_sums.index(s)]]
+    snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
+    catalog['_idx'] = range(len(catalog['_idx']))               # Reassign star ids to be continuous
+    catalog.add_column(Column(circ_sums), index=catalog.colnames.index('dend_flux')+1, name='circ_flux')
+    catalog.add_column(Column(snr_vals), index=catalog.colnames.index('circ_flux')+1, name='snr')
+    catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
     
 # Execute the script
 imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'
 catfile = './cat/cat_val0.000325_delt0.0005525_pix7.5.dat'
 
-reject(imfile, catfile, 7.)
+reject(imfile, catfile, 6.)

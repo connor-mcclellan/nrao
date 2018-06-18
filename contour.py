@@ -39,12 +39,21 @@ def contour(infile, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=
         leaves.append(d.leaves[i].idx)
     cat = cat[leaves]                                   # Use only leaves
     cat['_idx'] = range(len(cat['_idx']))               # Reassign star ids to be continuous
+    
+    # Use FWHM for ellipse dimensions instead of sigma
+    cat['major_sigma'] = cat['major_sigma']*np.sqrt(8*np.log(2))
+    cat['minor_sigma'] = cat['minor_sigma']*np.sqrt(8*np.log(2))
+    cat.rename_column('major_sigma', 'major_fwhm')
+    cat.rename_column('minor_sigma', 'minor_fwhm')
+    cat.rename_column('flux', 'dend_flux')
+    
+    # Output the catalog file
     cat.write('./cat/cat_'+outfile+'.dat', format='ascii')
     
     with open('./reg/reg_'+outfile+'.reg', 'w') as fh:  # write catalog information to region file
-	    fh.write("fk5\n")
+	    fh.write("icrs\n")
 	    for row in cat:
-	        fh.write("ellipse({x_cen}, {y_cen}, {major_sigma}, {minor_sigma}, {position_angle}) # text={{{_idx}}}\n".format(**dict(zip(row.colnames, row))))
+	        fh.write("ellipse({x_cen}, {y_cen}, {major_fwhm}, {minor_fwhm}, {position_angle}) # text={{{_idx}}}\n".format(**dict(zip(row.colnames, row))))
 
     if plot:                                            # create PDF plots of contour regions, if enabled
         ax = plt.gca()

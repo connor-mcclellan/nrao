@@ -21,5 +21,5 @@
  - Set the sky region name ([sky region])
  - Set image filenames and their associated region filenames for each band of observation in "measure.py"
  - Run "measure.py"
- - Sources will be cross-matched between the three region files, and a data file containing source IDs, fluxes in each band, etc. will be saved to "[sky_region]/measurements.dat"
+ - Sources will be cross-matched between the three region files, and a data file containing source IDs, fluxes in each band, etc. will be saved to "[sky region]/measurements.dat"
  - Flux histograms and source cutout plots will be saved in "./[sky region]/", labeled by source ID.

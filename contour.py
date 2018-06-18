@@ -10,9 +10,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
     
-def contour(infile, min_value=0.00035, min_delta=0.000525, min_npix=10, plot=True, verbose=True):
+def contour(infile, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=False, verbose=True):
     
-    outfile = 'dend_val{:.5g}_delt{:.5g}_pix{}'.format(min_value, min_delta, min_npix)
+    outfile = 'val{:.5g}_delt{:.5g}_pix{}'.format(min_value, min_delta, min_npix)
     contfile = fits.open(infile)                        # load in fits image
     da = contfile[0].data.squeeze()                     # get rid of extra axes
 
@@ -34,8 +34,12 @@ def contour(infile, min_value=0.00035, min_delta=0.000525, min_npix=10, plot=Tru
             }
 
     cat = pp_catalog(d, metadata)                       # set up position-position catalog
-    if verbose:
-        cat.pprint(show_unit=True, max_lines=10)        # display to check values
+    leaves = []
+    for i in range(len(d.leaves)):
+        leaves.append(d.leaves[i].idx)
+    cat = cat[leaves]                                   # Use only leaves
+    cat['_idx'] = range(len(cat['_idx']))               # Reassign star ids to be continuous
+    cat.write('./cat/cat_'+outfile+'.dat', format='ascii')
     
     with open('./reg/reg_'+outfile+'.reg', 'w') as fh:  # write catalog information to region file
 	    fh.write("fk5\n")
@@ -82,7 +86,7 @@ infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image
 #min_values = np.linspace(0.0002, 0.00035, 2)
 min_values = np.array([0.000325])
 min_deltas = min_values*1.7
-min_npixs = [5, 7.5]
+min_npixs = [7.5]
 
 print("Min values: ", min_values)
 print("Min deltas: ", min_deltas)

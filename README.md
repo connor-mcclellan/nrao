@@ -19,3 +19,4 @@
  - Lots of overlapping dendrogram regions (maybe this is ok?)
      - [SOLVED] Use only dendrogram leaves, not branches or trunks.
  - Aperture sum for circular apertures is a factor of 100x larger than for dendrogram contour apertures
+     - [SOLVED] Units were in Jy/Beam instead of Jy. Divided by ppbeam factor of 101.72 to correct.

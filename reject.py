@@ -9,17 +9,22 @@ from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
 from copy import deepcopy
+import radio_beam
 from func import rms, plot_grid
 import warnings
 warnings.filterwarnings('ignore')
 
 def reject(imfile, catfile, threshold):
     
-    contfile = fits.open(imfile)                        
+    contfile = fits.open(imfile)
     data = contfile[0].data.squeeze()                   
     mywcs = wcs.WCS(contfile[0].header).celestial
     outfile = os.path.basename(catfile).split('cat_')[1].split('.dat')[0]
     catalog = Table.read(catfile, format='ascii')
+    
+    beam = radio_beam.Beam.from_fits_header(contfile[0].header)
+    pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 * u.deg
+    ppbeam = (beam.sr/(pixel_scale**2)).decompose().value
     
     min_value = outfile.split('val')[1].split('_delt')[0]
     min_delta = outfile.split('delt')[1].split('_pix')[0]
@@ -46,10 +51,10 @@ def reject(imfile, catfile, threshold):
     circ_sums = []
     
     for i in range(len(catalog)):
-        x_cen = catalog['x_cen'][i]
-        y_cen = catalog['y_cen'][i]
-        major_fwhm = catalog['major_fwhm'][i]
-        minor_fwhm = catalog['minor_fwhm'][i]
+        x_cen = catalog['x_cen'][i] * u.deg
+        y_cen = catalog['y_cen'][i] * u.deg
+        major_fwhm = catalog['major_fwhm'][i] * u.deg
+        minor_fwhm = catalog['minor_fwhm'][i] * u.deg
         position_angle = catalog['position_angle'][i]
         dend_flux = catalog['dend_flux'][i]
         
@@ -58,11 +63,10 @@ def reject(imfile, catfile, threshold):
         
         # Convert ellipse parameters to pixel values        
         x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
-        pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 #* u.deg / u.pix
         pix_major_axis = major_fwhm/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
-        size = ((center_distance+annulus_width)*pixel_scale+major_fwhm)*2.2*u.deg
+        size = ((center_distance+annulus_width)*pixel_scale+major_fwhm)*2.2
         position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
         xx, yy = cutout.center_cutout   # Start using cutout coordinates
@@ -96,7 +100,7 @@ def reject(imfile, catfile, threshold):
         snr_vals.append(flux_rms_ratio)
         
         # Sum the flux within the circular aperture
-        circ_sum = np.sum(cutout.data[np.where(mask == 1)])
+        circ_sum = np.sum(cutout.data[np.where(mask == 1)])/ppbeam
         circ_sums.append(circ_sum)
         
         # Reject bad sources below some SNR threshold

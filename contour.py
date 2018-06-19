@@ -21,7 +21,6 @@ def contour(infile, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=
 
     d = Dendrogram.compute(da, min_value=min_value, min_delta=min_delta, min_npix=min_npix, wcs=mywcs, verbose=verbose)
     pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 * u.deg
-    pixel_scale_as = pixel_scale.to(u.arcsec).value
 
     metadata = {
             'data_unit':u.Jy / u.beam,
@@ -32,7 +31,7 @@ def contour(infile, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=
             'velocity_scale':u.km/u.s,
             'wcs':mywcs,
             }
-
+    
     cat = pp_catalog(d, metadata)                       # set up position-position catalog
     leaves = []
     for i in range(len(d.leaves)):

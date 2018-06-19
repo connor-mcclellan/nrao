@@ -9,9 +9,15 @@
  - [X] Multiply ellipse dimensions by 2.35 to convert to FWHM instead of sigma
  - [X] Add columns to dendrogram catalog for circular aperture sum, dendrogram contour sum
  - [X] Add ability to manually accept and reject sources
+ - [ ] Use astropy regions to create elliptical apertures / masks
  - [ ] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
- - [ ] Use master catalog to photometer sources in all bands, outputting the result as an astropy table
- - [ ] Use flux table to create histograms
+    - Convolved ellipse properties
+    - Dendrogram fluxes in each band (when available, empty if not)
+ - [ ] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
+    - Convolved ellipse, averaged ellipse, fixed radius circle (of several radii)
+    - Noise level aperture sum for non-detections, to set an upper constraint (flagged?)
+    - Mean background flux (from annular regions) instead of background subtraction
+ - [ ] Use final master catalog to create flux histograms
  - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs

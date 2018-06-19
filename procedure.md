@@ -25,7 +25,7 @@
 ### Source matching
  - Add catalog filenames for each band of observation to the catalog file list in "sourcematch.py"
  - Run "sourcematch.py"
- - Sources will be matched between the provided catalog files, and a data file containing source IDs and ellipse properties will be saved to "./[sky region]/mastercat_[sky_region].dat"
+ - Sources will be matched between the provided catalog files, and a data file containing source IDs, ellipse properties, and available dendrogram fluxes across bands will be saved to "./[sky region]/mastercat_[sky_region].dat"
     - If a source is present in one image but not any others, its ellipse will still be added to the master catalog so that it can be measured across all bands for flux comparison
     - If a source is detected in multiple images, the ellipse properties will be averaged
 
@@ -33,5 +33,5 @@
  - Add image filenames for each band of observation to the image file list in "fluxcomparison.py"
  - Set the master catalog file path
  - Run "fluxcomparison.py"
- - Circular apertures will be used for photometry across all bands, with radius equal to the semimajor axis of the ellipses in the master catalog
- - Fluxes in each band for each source will be output as an astropy table to "./[sky region]/sourcefluxes_[band1]_[band2]_..._[bandN]_[sky region].dat"
+ - A wide range of apertures will be used for photometry across all bands
+ - Fluxes in each band for each source will be added to the master catalog

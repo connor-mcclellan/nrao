@@ -15,7 +15,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def reject(imfile, catfile, threshold):
-    
+    print("\nLoading image file...")
     contfile = fits.open(imfile)
     data = contfile[0].data.squeeze()                   
     mywcs = wcs.WCS(contfile[0].header).celestial
@@ -35,13 +35,17 @@ def reject(imfile, catfile, threshold):
     if os.path.isfile('./reg/reg_'+outfile+'_filtered.reg'):
         os.remove('./reg/reg_'+outfile+'_filtered.reg')
     
-    # Load in manually accepted sources
-    overridden = []
-    if os.path.isfile('./override/override_'+outfile+'.txt'):
-        overridden = np.loadtxt('./override/override_'+outfile+'.txt')
-    print("\nManually accepted sources: ", overridden)
+    # Load in manually accepted and rejected sources
+    override_accepted = []
+    override_rejected = []
+    if os.path.isfile('./override/accept_'+outfile+'.txt'):
+        override_accepted = np.loadtxt('./override/accept_'+outfile+'.txt')
+    if os.path.isfile('./override/reject_'+outfile+'.txt'):
+        override_rejected = np.loadtxt('./override/reject_'+outfile+'.txt')
+    print("\nManually accepted sources: ", override_accepted)
+    print("Manually rejected sources: ", override_rejected)
     
-    print('Calculating RMS values within aperture annuli...')
+    print('\nCalculating RMS values within aperture annuli...')
     pb = ProgressBar(len(catalog))
     
     data_cube = []
@@ -106,8 +110,14 @@ def reject(imfile, catfile, threshold):
         # Reject bad sources below some SNR threshold
         rejected = False
         if flux_rms_ratio <= threshold:
-            if i not in overridden:
-                rejected = True
+            rejected = True
+        
+        # Manual overrides
+        if i in override_accepted:
+            rejected = False
+        if i in override_rejected:
+            rejected = True
+        
         rejects.append(rejected)
         
         # Add non-rejected source ellipses to a new region file
@@ -116,24 +126,31 @@ def reject(imfile, catfile, threshold):
             if os.stat(fname).st_size == 0:
                 fh.write("icrs\n")
             if not rejected:
-                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen, y_cen, major_fwhm, minor_fwhm, position_angle, i))
+                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen.value, y_cen.value, major_fwhm.value, minor_fwhm.value, position_angle, i))
         pb.update()
-        
+    
     # Plot the grid of sources
     plot_grid(data_cube, masks, rejects, snr_vals, range(len(catalog)))
     plt.suptitle('min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(min_value, min_delta, min_npix, threshold))
-    print('Input a comma-separated list of sources to manually accept, then close the plot window. ')
+    
+    print('Manual overrides example: type "r19, a5" to manually reject source #19 and accept source #5.')
     plt.show()
 
-    overrides = input("\nPress enter to confirm the above. ").split(', ')
-    print(overrides)
+    overrides = input("\nType manual override list, or press enter to confirm.\n").split(', ')
+    accepted_list = [s[1:] for s in list(filter(lambda x: x.startswith('a'), overrides))]
+    rejected_list = [s[1:] for s in list(filter(lambda x: x.startswith('r'), overrides))]
     
-    # Save the manually accepted sources
-    fname = './override/override_'+outfile+'.txt'
+    # Save the manually accepted and rejected sources
+    fname = './override/accept_'+outfile+'.txt'
     with open(fname, 'a') as fh:
-        for num in overrides:
+        for num in accepted_list:
             fh.write('\n'+str(num))
-    print("Manual overrides written to './override/override_"+outfile+".txt'. New overrides will take effect the next time the rejection script is run.")
+    fname = './override/reject_'+outfile+'.txt'
+    with open(fname, 'a') as fh:
+        for num in rejected_list:
+            fh.write('\n'+str(num))
+    
+    print("Manual overrides written to './override/'. New overrides will take effect the next time the rejection script is run.")
     
     # Save the filtered catalog with new columns for circular aperture flux sum and SNR
     catalog.remove_rows(rejects)
@@ -145,7 +162,7 @@ def reject(imfile, catfile, threshold):
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
     
 # Execute the script
-imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'
-catfile = './cat/cat_val0.000325_delt0.0005525_pix7.5.dat'
+imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'
+catfile = './cat/cat_w51e2_B3_val0.00015_delt0.000255_pix7.5.dat'
 
 reject(imfile, catfile, 6.)

@@ -8,9 +8,10 @@
  - [X] Use dendrogram catalog instead of region file for data handling between scripts
  - [X] Multiply ellipse dimensions by 2.35 to convert to FWHM instead of sigma
  - [X] Add columns to dendrogram catalog for circular aperture sum, dendrogram contour sum
- - [ ] Add elliptical aperture sums
- - [ ] Use union of detected sources between images to create source IDs, so that flux measurements can be made consistently across bands
- - [ ] Create flux histograms for all cataloged sources, across all three bands
+ - [X] Add ability to manually accept and reject sources
+ - [ ] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
+ - [ ] Use master catalog to photometer sources in all bands, outputting the result as an astropy table
+ - [ ] Use flux table to create histograms
  - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs

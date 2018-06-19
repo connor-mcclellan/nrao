@@ -3,6 +3,7 @@ import matplotlib.gridspec as gs
 import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
+import pickle
 
 def plot_grid(datacube, masks, rejects, snr_vals, names):
     n_images = len(datacube)
@@ -24,3 +25,12 @@ def plot_grid(datacube, masks, rejects, snr_vals, names):
 
 def rms(x):
     return (np.absolute(np.mean(x**2) - (np.mean(x))**2))**0.5
+    
+def saveobj(obj, name):
+    with open('./tests/'+name+'.pickle', 'wb') as output:
+        pickle.dump(obj, output, protocol=pickle.HIGHEST_PROTOCOL)
+
+def loadobj(name):
+    filename = name+'.pickle'
+    with open(filename, 'rb') as f:
+        return pickle.load(f)

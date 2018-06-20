@@ -9,7 +9,7 @@
  - [X] Multiply ellipse dimensions by 2.35 to convert to FWHM instead of sigma
  - [X] Add columns to dendrogram catalog for circular aperture sum, dendrogram contour sum
  - [X] Add ability to manually accept and reject sources
- - [ ] Use astropy regions to create elliptical apertures / masks
+ - [X] Use astropy regions to create elliptical apertures / masks
  - [ ] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
     - Convolved ellipse properties
     - Dendrogram fluxes in each band (when available, empty if not)

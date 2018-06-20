@@ -1,5 +1,6 @@
 from astropy.table import Table
 
+
 def sourcematch(catfilelist):
     catlist = []
     for catfile in catfilelist:

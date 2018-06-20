@@ -5,7 +5,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import pickle
 
-def plot_grid(datacube, masks, rejects, snr_vals, names):
+def plot_grid(datacube, masks, rejects, snr_vals, names):   #change this to use SNR vals and names from catalog column?
     n_images = len(datacube)
     xplots = int(np.around(np.sqrt(n_images)))
     yplots = xplots + 1
@@ -22,6 +22,11 @@ def plot_grid(datacube, masks, rejects, snr_vals, names):
         plt.text(0, 0, '{}  SN {:.1f}'.format(names[i], snr_vals[i]), fontsize=7, color='w')
         plt.xticks([])
         plt.yticks([])
+
+def mask(reg, cutout):
+    n = cutout.shape[0]
+    mask = reg.to_mask(mode='center')
+    return np.array(mask.to_image((n, n)), dtype='int')
 
 def rms(x):
     return (np.absolute(np.mean(x**2) - (np.mean(x))**2))**0.5

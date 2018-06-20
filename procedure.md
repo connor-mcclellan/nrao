@@ -30,8 +30,8 @@
     - If a source is detected in multiple images, the ellipse properties will be averaged
 
 ### Flux Comparison
- - Add image filenames for each band of observation to the image file list in "fluxcomparison.py"
+ - Add image filenames for each band of observation to the image file list in "flux.py"
  - Set the master catalog file path
- - Run "fluxcomparison.py"
+ - Run "flux.py"
  - A wide range of apertures will be used for photometry across all bands
  - Fluxes in each band for each source will be added to the master catalog

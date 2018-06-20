@@ -12,7 +12,7 @@ warnings.filterwarnings('ignore')
     
 def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=False, verbose=False):
     
-    outfile = '{}_{}_val{:.5g}_delt{:.5g}_pix{}'.format(region, band, min_value, min_delta, min_npix)
+    outfile = 'region{}_band{}_val{:.5g}_delt{:.5g}_pix{}'.format(region, band, min_value, min_delta, min_npix)
     contfile = fits.open(infile)                        # load in fits image
     da = contfile[0].data.squeeze()                     # get rid of extra axes
 
@@ -87,12 +87,20 @@ def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_n
         plt.setp([x for x in cntr if x.get_color()[0,1] == 1], linewidth=0.5) # Green
         plt.savefig('./plot_contour/contour_'+outfile+'zoom.pdf')
         
+#--- SET IMAGE INFORMATION ---
         
-        
-infilename = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'
+#infilename = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'    # band 3
+#band = 3
+#region = w51e2
 
-min_values = np.linspace(0.00015, 0.000245, 6)
-#min_values = np.array([0.00025])
+infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'   # band 6
+band = 6
+region = w51e2
+
+#-----------------------------
+
+#min_values = np.linspace(0.00015, 0.000245, 6)
+min_values = np.array([0.000325])
 min_deltas = min_values*1.7
 min_npixs = [7.5]
 
@@ -107,7 +115,7 @@ print()
 for i in range(len(min_values)):
     for j in range(len(min_npixs)):
         print("\nMin value: {:.8g}    Min delta: {:.8g}   Min npix: {}".format(min_values[i], min_deltas[i], min_npixs[j]))
-        contour(infilename, 'w51e2', 'B3', min_value=min_values[i], min_delta=min_deltas[i], min_npix=min_npixs[j], verbose=False)
+        contour(infilename, region, band, min_value=min_values[i], min_delta=min_deltas[i], min_npix=min_npixs[j], verbose=False)
         
         # print('Total task progress:')
         pb.update()

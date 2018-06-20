@@ -10,25 +10,34 @@ import numpy as np
 from matplotlib import pyplot as plt
 from copy import deepcopy
 import radio_beam
-from func import rms, plot_grid
+from func import rms, plot_grid, mask
+import regions
 import warnings
 warnings.filterwarnings('ignore')
 
 def reject(imfile, catfile, threshold):
-    print("\nLoading image file...")
+
+    # Extract information from filename
+    outfile = os.path.basename(catfile).split('cat_')[1].split('.dat')[0]
+    region = outfile.split('region')[1].split('_band')[0]
+    band = outfile.split('band')[1].split('_val')[0]
+    min_value = outfile.split('val')[1].split('_delt')[0]
+    min_delta = outfile.split('delt')[1].split('_pix')[0]
+    min_npix = outfile.split('pix')[1]
+    print("\nSource rejection for region {} in band {}".format(region, band))
+
+    print("Loading image file")
     contfile = fits.open(imfile)
     data = contfile[0].data.squeeze()                   
     mywcs = wcs.WCS(contfile[0].header).celestial
-    outfile = os.path.basename(catfile).split('cat_')[1].split('.dat')[0]
-    catalog = Table.read(catfile, format='ascii')
+    
+    catalog = Table(Table.read(catfile, format='ascii'), masked=True)
     
     beam = radio_beam.Beam.from_fits_header(contfile[0].header)
     pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 * u.deg
     ppbeam = (beam.sr/(pixel_scale**2)).decompose().value
     
-    min_value = outfile.split('val')[1].split('_delt')[0]
-    min_delta = outfile.split('delt')[1].split('_pix')[0]
-    min_npix = outfile.split('pix')[1]
+    
     
     if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
         os.remove('./reg/reg_'+outfile+'_annulus.reg')
@@ -39,73 +48,62 @@ def reject(imfile, catfile, threshold):
     override_accepted = []
     override_rejected = []
     if os.path.isfile('./override/accept_'+outfile+'.txt'):
-        override_accepted = np.loadtxt('./override/accept_'+outfile+'.txt')
+        override_accepted = np.loadtxt('./override/accept_'+outfile+'.txt').astype('int')
     if os.path.isfile('./override/reject_'+outfile+'.txt'):
-        override_rejected = np.loadtxt('./override/reject_'+outfile+'.txt')
+        override_rejected = np.loadtxt('./override/reject_'+outfile+'.txt').astype('int')
     print("\nManually accepted sources: ", override_accepted)
     print("Manually rejected sources: ", override_rejected)
     
-    print('\nCalculating RMS values within aperture annuli...')
+    print('\nCalculating RMS values within aperture annuli')
     pb = ProgressBar(len(catalog))
     
     data_cube = []
     masks = []
     rejects = []
     snr_vals = []
-    circ_sums = []
     
     for i in range(len(catalog)):
         x_cen = catalog['x_cen'][i] * u.deg
         y_cen = catalog['y_cen'][i] * u.deg
         major_fwhm = catalog['major_fwhm'][i] * u.deg
         minor_fwhm = catalog['minor_fwhm'][i] * u.deg
-        position_angle = catalog['position_angle'][i]
+        position_angle = catalog['position_angle'][i] * u.deg
         dend_flux = catalog['dend_flux'][i]
         
         annulus_width = 15 #* u.pix
         center_distance = 10 #* u.pix
         
-        # Convert ellipse parameters to pixel values        
-        x_pix, y_pix = np.array(mywcs.wcs_world2pix(x_cen, y_cen, 1))
-        pix_major_axis = major_fwhm/pixel_scale
+        # Define some ellipse properties in pixel coordinates
+        position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
+        pix_position = np.array(position.to_pixel(mywcs))
+        pix_major_fwhm = major_fwhm/pixel_scale
+        pix_minor_fwhm = minor_fwhm/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
         size = ((center_distance+annulus_width)*pixel_scale+major_fwhm)*2.2
-        position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
-        xx, yy = cutout.center_cutout   # Start using cutout coordinates
+        cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
         
-        # Measure background RMS within a circular annulus
-        n = cutout.shape[0]
-        mask = np.zeros(cutout.shape, dtype=bool)
-        y, x = np.ogrid[-yy:n-yy, -xx:n-xx]
-        inner_mask = x**2. + y**2. <= (center_distance+pix_major_axis)**2
-        outer_mask = x**2. + y**2. <= (center_distance+pix_major_axis+annulus_width)**2
-        circ_mask = x**2. + y**2. <= pix_major_axis**2
+        # Define the aperture regions needed for SNR
+        ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm, pix_minor_fwhm, angle=position_angle.to(u.rad).value*u.deg) # BUG IN REGIONS! It thinks its in degrees, but it's actually radians.
+        innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
+        outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
+        #circ_reg = regions.CirclePixelRegion(cutout_center, pix_major_fwhm)
         
-        mask[outer_mask] = 1
-        mask[inner_mask] = 0
+        # Make masks from aperture regions
+        ellipse_mask = mask(ellipse_reg, cutout)
+        annulus_mask = mask(outerann_reg, cutout) - mask(innerann_reg, cutout)
         
-        # Plots of annulus regions
+        # Plot annulus regions
         data_cube.append(cutout.data)
-        graph_mask = deepcopy(mask)
-        graph_mask[circ_mask] = 1
+        graph_mask = deepcopy(annulus_mask) + ellipse_mask
         masks.append(graph_mask)
         
-        # Calculate the RMS within the annulus region
-        bg_rms = rms(cutout.data[np.where(mask == 1)])
-        
-        # Find peak flux within center circle
-        mask[:,:] = 0
-        circ_mask = x**2. + y**2. <= pix_major_axis**2
-        mask[circ_mask] = 1
-        peak_flux = np.max(cutout.data[np.where(mask == 1)])
+        # Calculate the SNR and aperture flux sums
+        bg_rms = rms(cutout.data[annulus_mask.astype('bool')])
+        peak_flux = np.max(cutout.data[ellipse_mask.astype('bool')])
         flux_rms_ratio = peak_flux / bg_rms
         snr_vals.append(flux_rms_ratio)
-        
-        # Sum the flux within the circular aperture
-        circ_sum = np.sum(cutout.data[np.where(mask == 1)])/ppbeam
-        circ_sums.append(circ_sum)
         
         # Reject bad sources below some SNR threshold
         rejected = False
@@ -122,16 +120,16 @@ def reject(imfile, catfile, threshold):
         
         # Add non-rejected source ellipses to a new region file
         fname = './reg/reg_'+outfile+'_filtered.reg'
-        with open(fname, 'a') as fh:  # write catalog information to region file
+        with open(fname, 'a') as fh:
             if os.stat(fname).st_size == 0:
                 fh.write("icrs\n")
             if not rejected:
-                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen.value, y_cen.value, major_fwhm.value, minor_fwhm.value, position_angle, i))
+                fh.write("ellipse({}, {}, {}, {}, {}) # text={{{}}}\n".format(x_cen.value, y_cen.value, major_fwhm.value, minor_fwhm.value, position_angle.value, i))
         pb.update()
     
     # Plot the grid of sources
     plot_grid(data_cube, masks, rejects, snr_vals, range(len(catalog)))
-    plt.suptitle('min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(min_value, min_delta, min_npix, threshold))
+    plt.suptitle('region={}, band={}, min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(region, band, min_value, min_delta, min_npix, threshold))
     
     print('Manual overrides example: type "r19, a5" to manually reject source #19 and accept source #5.')
     plt.show()
@@ -152,17 +150,18 @@ def reject(imfile, catfile, threshold):
     
     print("Manual overrides written to './override/'. New overrides will take effect the next time the rejection script is run.")
     
-    # Save the filtered catalog with new columns for circular aperture flux sum and SNR
+    # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)
-    circ_sums = [s for s in circ_sums if not rejects[circ_sums.index(s)]]
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
     catalog['_idx'] = range(len(catalog['_idx']))               # Reassign star ids to be continuous
-    catalog.add_column(Column(circ_sums), index=catalog.colnames.index('dend_flux')+1, name='circ_flux')
-    catalog.add_column(Column(snr_vals), index=catalog.colnames.index('circ_flux')+1, name='snr')
+    catalog.add_column(Column(snr_vals), index=catalog.colnames.index('dend_flux')+1, name='snr_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
     
 # Execute the script
-imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'
-catfile = './cat/cat_w51e2_B3_val0.00015_delt0.000255_pix7.5.dat'
+#imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
+#catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
+
+imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
+catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
 
 reject(imfile, catfile, 6.)

@@ -85,7 +85,10 @@ def reject(imfile, catfile, threshold):
         cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
         
         # Define the aperture regions needed for SNR
-        ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm, pix_minor_fwhm, angle=position_angle.to(u.rad).value*u.deg) # BUG IN REGIONS! It thinks its in degrees, but it's actually radians.
+        
+        ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm, pix_minor_fwhm, angle=position_angle) # MAKE SURE YOU EDIT ASTROPY REGIONS BEFORE RUNNING THIS PART! More below:
+        # Assuming you're using regions 0.2, open anaconda3/pkgs/regions-0.2-py36_0/lib/python3.6/site-packages/regions/shapes/ellipse.py and in line 126 change "self.angle.to(u.deg).value," to "self.angle.to(u.rad).value,"
+        
         innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
         outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
         #circ_reg = regions.CirclePixelRegion(cutout_center, pix_major_fwhm)

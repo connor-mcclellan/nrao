@@ -68,7 +68,7 @@ def reject(imfile, catfile, threshold):
         major_fwhm = catalog['major_fwhm'][i] * u.deg
         minor_fwhm = catalog['minor_fwhm'][i] * u.deg
         position_angle = catalog['position_angle'][i] * u.deg
-        dend_flux = catalog['dend_flux'][i]
+        dend_flux = catalog['dend_flux_band{}'.format(band)][i]
         
         annulus_width = 15 #* u.pix
         center_distance = 10 #* u.pix
@@ -156,15 +156,16 @@ def reject(imfile, catfile, threshold):
     # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
-    catalog['_idx'] = range(len(catalog['_idx']))               # Reassign star ids to be continuous
-    catalog.add_column(Column(snr_vals), index=catalog.colnames.index('dend_flux')+1, name='snr_band'+band)
+    # catalog['_idx'] = range(len(catalog['_idx']))               # Reassign star ids to be continuous
+    catalog.add_column(Column(snr_vals), name='snr_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
-    
-# Execute the script
-#imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
-#catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
 
-imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
-catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
+if __name__ == '__main__':
+    # Execute the script
+    imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
+    catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
+
+    #imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
+    #catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
 
 reject(imfile, catfile, 6.)

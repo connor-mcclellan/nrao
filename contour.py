@@ -10,7 +10,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
     
-def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=False, verbose=False):
+def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_npix=7.5, plot=False, verbose=True):
     
     outfile = 'region{}_band{}_val{:.5g}_delt{:.5g}_pix{}'.format(region, band, min_value, min_delta, min_npix)
     contfile = fits.open(infile)                        # load in fits image
@@ -44,7 +44,7 @@ def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_n
     cat['minor_sigma'] = cat['minor_sigma']*np.sqrt(8*np.log(2))
     cat.rename_column('major_sigma', 'major_fwhm')
     cat.rename_column('minor_sigma', 'minor_fwhm')
-    cat.rename_column('flux', 'dend_flux')
+    cat.rename_column('flux', 'dend_flux_band{}'.format(band))
     
     # Output the catalog file
     cat.write('./cat/cat_'+outfile+'.dat', format='ascii')
@@ -86,37 +86,39 @@ def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_n
         plt.setp([x for x in cntr if x.get_color()[0,0] == 1], linewidth=0.75) # Red
         plt.setp([x for x in cntr if x.get_color()[0,1] == 1], linewidth=0.5) # Green
         plt.savefig('./plot_contour/contour_'+outfile+'zoom.pdf')
-        
-#--- SET IMAGE INFORMATION ---
-        
-#infilename = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'    # band 3
-#band = 3
-#region = w51e2
 
-infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'   # band 6
-band = 6
-region = w51e2
 
-#-----------------------------
+if __name__ == '__main__':
+    #--- SET IMAGE INFORMATION ---
+            
+    infilename = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz'    # band 3
+    band = 3
+    region = 'w51e2'
 
-#min_values = np.linspace(0.00015, 0.000245, 6)
-min_values = np.array([0.000325])
-min_deltas = min_values*1.7
-min_npixs = [7.5]
+    #infilename = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz'   # band 6
+    #band = 6
+    #region = 'w51e2'
 
-print("Min values: ", min_values)
-print("Min deltas: ", min_deltas)
-print("Min npix: ", min_npixs, '\n')
+    #-----------------------------
 
-print('Total task progress:')
-pb = ProgressBar(len(min_values)*len(min_npixs))
-print()
+    min_values = np.array([0.00015])   # use for band 3
+    #min_values = np.array([0.000325])   # use for band 6
+    min_deltas = min_values*1.7
+    min_npixs = [7.5]
 
-for i in range(len(min_values)):
-    for j in range(len(min_npixs)):
-        print("\nMin value: {:.8g}    Min delta: {:.8g}   Min npix: {}".format(min_values[i], min_deltas[i], min_npixs[j]))
-        contour(infilename, region, band, min_value=min_values[i], min_delta=min_deltas[i], min_npix=min_npixs[j], verbose=False)
-        
-        # print('Total task progress:')
-        pb.update()
+    print("Min values: ", min_values)
+    print("Min deltas: ", min_deltas)
+    print("Min npix: ", min_npixs, '\n')
+
+    print('Total task progress:')
+    pb = ProgressBar(len(min_values)*len(min_npixs))
+    print()
+
+    for i in range(len(min_values)):
+        for j in range(len(min_npixs)):
+            print("\nMin value: {:.8g}    Min delta: {:.8g}   Min npix: {}".format(min_values[i], min_deltas[i], min_npixs[j]))
+            contour(infilename, region, band, min_value=min_values[i], min_delta=min_deltas[i], min_npix=min_npixs[j], verbose=True)
+            
+            print('Total task progress:')
+            pb.update()
     

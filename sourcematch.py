@@ -1,4 +1,4 @@
-from astropy.table import Table, vstack
+from astropy.table import MaskedColumn, Table, vstack
 import astropy.units as u
 import numpy as np
 import time
@@ -36,14 +36,18 @@ def convolve_matches(table1, table2):
         diff_table = vstack([stack[:i], stack[i+1:]])['_idx', 'x_cen', 'y_cen', 'position_angle']
         diff_table['x_cen'] = np.abs(diff_table['x_cen'] - teststar['x_cen'])
         diff_table['y_cen'] = np.abs(diff_table['y_cen'] - teststar['y_cen'])
-        diff_table.sort('y_cen')
+        diff_table.sort('x_cen')
         
-
         threshold = 1e-5
         found_match = False
-        d = dist(diff_table['x_cen'][0], diff_table['y_cen'][0])
-        if d <= threshold:
-            found_match = True
+        
+        dist_col = MaskedColumn(length=len(diff_table), name='distance', mask=True)
+        for j in range(10): # speed up computation by only going through 10 closest
+            dist_col[j] = dist(diff_table[j]['x_cen'], diff_table[j]['y_cen'])
+            if dist_col[j] <= threshold:
+                found_match = True
+        diff_table.add_column(dist_col)
+        diff_table.sort('distance')
 
         if found_match:
             match_index = getrowindex(diff_table[0]['_idx'], diff_table[0]['position_angle'], stack)

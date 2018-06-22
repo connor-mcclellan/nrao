@@ -30,3 +30,4 @@
  - sourcematch.py crashes due to an indexing error on i=26, as a result of trying to take the average of x center values between the test star and the match
     - [SOLVED] The matched star's table data was being erased when trying to delete the matched star's row in the stacked table, so the program was trying to take an average using an empty table. Solved using deepcopy.
     - It reported an indexing error because the matched star is the last entry in the stacked column. Maybe in other cases where this happened, the iterator was taking the next row in front of the missing data?
+- Convolution for nearly identical ellipses returns a larger ellipse with position angle 0

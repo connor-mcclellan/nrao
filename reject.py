@@ -162,10 +162,10 @@ def reject(imfile, catfile, threshold):
 
 if __name__ == '__main__':
     # Execute the script
-    imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
-    catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
+    #imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
+    #catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
 
-    #imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
-    #catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
+    imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
+    catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
 
 reject(imfile, catfile, 6.)

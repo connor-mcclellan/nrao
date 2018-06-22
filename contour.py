@@ -6,6 +6,7 @@ import radio_beam
 from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
+from func import savereg
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -46,13 +47,9 @@ def contour(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_n
     cat.rename_column('minor_sigma', 'minor_fwhm')
     cat.rename_column('flux', 'dend_flux_band{}'.format(band))
     
-    # Output the catalog file
+    # Output the catalog and region files
     cat.write('./cat/cat_'+outfile+'.dat', format='ascii')
-    
-    with open('./reg/reg_'+outfile+'.reg', 'w') as fh:  # write catalog information to region file
-	    fh.write("icrs\n")
-	    for row in cat:
-	        fh.write("ellipse({x_cen}, {y_cen}, {major_fwhm}, {minor_fwhm}, {position_angle}) # text={{{_idx}}}\n".format(**dict(zip(row.colnames, row))))
+    savereg(cat, './reg/reg_'+outfile+'.reg')
 
     if plot:                                            # create PDF plots of contour regions, if enabled
         ax = plt.gca()

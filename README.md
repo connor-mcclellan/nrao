@@ -10,7 +10,7 @@
  - [X] Add columns to dendrogram catalog for circular aperture sum, dendrogram contour sum
  - [X] Add ability to manually accept and reject sources
  - [X] Use astropy regions to create elliptical apertures / masks
- - [ ] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
+ - [X] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
     - Convolved ellipse properties
     - Dendrogram fluxes in each band (when available, empty if not)
  - [ ] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
@@ -28,3 +28,5 @@
  - Aperture sum for circular apertures is a factor of 100x larger than for dendrogram contour apertures
      - [SOLVED] Units were in Jy/Beam instead of Jy. Divided by ppbeam factor of 101.72 to correct.
  - sourcematch.py crashes due to an indexing error on i=26, as a result of trying to take the average of x center values between the test star and the match
+    - [SOLVED] The matched star's table data was being erased when trying to delete the matched star's row in the stacked table, so the program was trying to take an average using an empty table. Solved using deepcopy.
+    - It reported an indexing error because the matched star is the last entry in the stacked column. Maybe in other cases where this happened, the iterator was taking the next row in front of the missing data?

@@ -41,6 +41,12 @@ def convolve(major1, minor1, pa1, major2, minor2, pa2):
         new_pa = 0.5 * np.arctan2(-1. * gamma, alpha - beta)
     return new_major, new_minor, new_pa
 
+def savereg(cat, filename):
+    with open(filename, 'w') as fh:
+        fh.write("icrs\n")
+        for row in cat:
+            fh.write("ellipse({x_cen}, {y_cen}, {major_fwhm}, {minor_fwhm}, {position_angle}) # text={{{_idx}}}\n".format(**dict(zip(row.colnames, row))))
+
 def mask(reg, cutout):
     n = cutout.shape[0]
     mask = reg.to_mask(mode='center')

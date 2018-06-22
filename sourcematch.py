@@ -2,7 +2,9 @@ from astropy.table import Table, vstack
 import astropy.units as u
 import numpy as np
 import time
-from func import convolve
+from copy import deepcopy
+from func import convolve, savereg
+from astropy.utils.console import ProgressBar
 
 
 def dist(x, y):
@@ -23,10 +25,10 @@ def convolve_matches(table1, table2):
     complete_colnames = set(table1.colnames+table2.colnames)
     stack = vstack([table1, table2])
     stack = stack[sorted(list(complete_colnames))]
-    
+    print('Convolving matches')
+    pb = ProgressBar(len(stack))
     i = 0
     while True:
-        print("Iteration: {}   Number of rows in stack: {}".format(i, len(stack)))
         if i == len(stack)-1:
             break
        
@@ -45,7 +47,7 @@ def convolve_matches(table1, table2):
 
         if found_match:
             match_index = getrowindex(diff_table[0]['_idx'], diff_table[0]['position_angle'], stack)
-            match = stack[match_index]
+            match = deepcopy(stack[match_index])
             stack.remove_row(match_index)
             
             # Convolve the match and the test star
@@ -68,11 +70,12 @@ def convolve_matches(table1, table2):
             
             
             # Replace any masked data in the teststar row with available data from the match
-            for k, truth in enumerate(stack.mask[0]):
+            for k, truth in enumerate(stack.mask[i]):
                 colname = stack.colnames[k]
                 if truth:
                     stack[i][colname] = match[colname]
         i += 1
+        pb.update()
         
     return stack
 
@@ -85,12 +88,20 @@ def make_master_cat(catfilelist):
     current_table = tablelist[0]
     for i in range(len(tablelist)-1):
         current_table = convolve_matches(current_table, tablelist[i+1])
-    return current_table
+    
+    region = catfilelist[0].split('_region')[1].split('_band')[0]
+    bands = [s.split('_band')[1] for s in list(filter(lambda x: x.startswith('dend_flux_band'), current_table.colnames))] # this is a disgusting hack but it works
+    bandstring = ''
+    for band in bands:
+        bandstring += '_{}'.format(band)
+    
+    # Save catalog and region files
+    current_table.write('./cat/mastercat_region{}_bands{}.dat'.format(region, bandstring), format='ascii')
+    savereg(current_table, './reg/masterreg_region{}_bands{}.reg'.format(region, bandstring))
         
 
 if __name__ == '__main__':
     band3file = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5_filtered.dat'
     band6file = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5_filtered.dat'
     filelist = [band3file, band6file]
-    final = make_master_cat(filelist)
-    print(final)
+    make_master_cat(filelist)

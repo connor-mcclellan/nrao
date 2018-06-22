@@ -12,7 +12,8 @@
  - [X] Use astropy regions to create elliptical apertures / masks
  - [X] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
     - Convolved ellipse properties
-    - Dendrogram fluxes in each band (when available, empty if not)
+    - Dendrogram fluxes in each band (when available, empty if not)\
+ - [X] Rework how image files are read in, for easier switching between bands and regions
  - [ ] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
     - Convolved ellipse, averaged ellipse, fixed radius circle (of several radii)
     - Noise level aperture sum for non-detections, to set an upper constraint (flagged?)

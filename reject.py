@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from copy import deepcopy
 import radio_beam
-from func import rms, plot_grid, mask
+from func import rms, plot_grid, mask, grabfileinfo, grabcatname
 import regions
 import warnings
 warnings.filterwarnings('ignore')
@@ -36,8 +36,6 @@ def reject(imfile, catfile, threshold):
     beam = radio_beam.Beam.from_fits_header(contfile[0].header)
     pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 * u.deg
     ppbeam = (beam.sr/(pixel_scale**2)).decompose().value
-    
-    
     
     if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
         os.remove('./reg/reg_'+outfile+'_annulus.reg')
@@ -85,13 +83,11 @@ def reject(imfile, catfile, threshold):
         cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
         
         # Define the aperture regions needed for SNR
-        
         ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm, pix_minor_fwhm, angle=position_angle) # MAKE SURE YOU EDIT ASTROPY REGIONS BEFORE RUNNING THIS PART! More below:
         # Assuming you're using regions 0.2, open anaconda3/pkgs/regions-0.2-py36_0/lib/python3.6/site-packages/regions/shapes/ellipse.py and in line 126 change "self.angle.to(u.deg).value," to "self.angle.to(u.rad).value,"
         
         innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
         outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
-        #circ_reg = regions.CirclePixelRegion(cutout_center, pix_major_fwhm)
         
         # Make masks from aperture regions
         ellipse_mask = mask(ellipse_reg, cutout)
@@ -113,12 +109,11 @@ def reject(imfile, catfile, threshold):
         if flux_rms_ratio <= threshold:
             rejected = True
         
-        # Manual overrides
+        # Process manual overrides
         if i in override_accepted:
             rejected = False
         if i in override_rejected:
             rejected = True
-        
         rejects.append(rejected)
         
         # Add non-rejected source ellipses to a new region file
@@ -132,11 +127,11 @@ def reject(imfile, catfile, threshold):
     
     # Plot the grid of sources
     plot_grid(data_cube, masks, rejects, snr_vals, range(len(catalog)))
-    plt.suptitle('region={}, band={}, min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(region, band, min_value, min_delta, min_npix, threshold))
-    
+    plt.suptitle('region={}, band={}, min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(region, band, min_value, min_delta, min_npix, threshold))  
     print('Manual overrides example: type "r19, a5" to manually reject source #19 and accept source #5.')
     plt.show()
-
+    
+    # Get overrides from user
     overrides = input("\nType manual override list, or press enter to confirm.\n").split(', ')
     accepted_list = [s[1:] for s in list(filter(lambda x: x.startswith('a'), overrides))]
     rejected_list = [s[1:] for s in list(filter(lambda x: x.startswith('r'), overrides))]
@@ -150,22 +145,15 @@ def reject(imfile, catfile, threshold):
     with open(fname, 'a') as fh:
         for num in rejected_list:
             fh.write('\n'+str(num))
-    
     print("Manual overrides written to './override/'. New overrides will take effect the next time the rejection script is run.")
     
     # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
-    # catalog['_idx'] = range(len(catalog['_idx']))               # Reassign star ids to be continuous
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 
 if __name__ == '__main__':
-    # Execute the script
-    #imfile = '/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz' # band 3
-    #catfile = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5.dat' # band 3
-
-    imfile = '/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz' # band 6
-    catfile = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5.dat' # band 6
-
+    imfile = grabfileinfo('w51e2', 3)[0]
+    catfile = grabcatname('w51e2', 3)
 reject(imfile, catfile, 6.)

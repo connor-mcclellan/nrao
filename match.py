@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 import time
 from copy import deepcopy
-from func import convolve, savereg
+from func import convolve, savereg, grabcatname
 from astropy.utils.console import ProgressBar
 
 
@@ -105,7 +105,12 @@ def make_master_cat(catfilelist):
         
 
 if __name__ == '__main__':
-    band3file = './cat/cat_regionw51e2_band3_val0.00015_delt0.000255_pix7.5_filtered.dat'
-    band6file = './cat/cat_regionw51e2_band6_val0.000325_delt0.0005525_pix7.5_filtered.dat'
-    filelist = [band3file, band6file]
+    
+    region = 'w51e2'
+    bands = [3, 6]
+    
+    filelist = []
+    for i in range(len(bands)):
+        filelist.append(grabcatname(region, bands[i], flag='filtered'))
+    
     make_master_cat(filelist)

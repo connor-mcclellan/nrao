@@ -4,9 +4,26 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.filterwarnings('ignore')
 import astropy.units as u
+from astropy.table import Table
 import pickle
 
-def plot_grid(datacube, masks, rejects, snr_vals, names):   #change this to use SNR vals and names from catalog column?
+def grabfileinfo(region, band):
+    """
+    Searches the imgfileinfo.dat file for the image with the given region and band. Returns a 6-element tuple with structure (filename, region, band, min_value, delt_frac, min_npix).
+    """
+    f = Table.read('./imgfileinfo.dat', format='ascii')
+    info = f[np.intersect1d(np.where(f['region'] == region), np.where(f['band'] == band))]
+    return tuple(info[0])
+
+def grabcatname(region, band, flag=''):
+    _, region, band, val, delt_frac, pix = grabfileinfo(region, band)
+    if flag:
+        catfile = './cat/cat_region{}_band{}_val{}_delt{:.5g}_pix{}_{}.dat'.format(region, band, val, delt_frac*val, pix, flag)
+    else:
+        catfile = './cat/cat_region{}_band{}_val{}_delt{:.5g}_pix{}.dat'.format(region, band, val, delt_frac*val, pix)
+    return catfile
+    
+def plot_grid(datacube, masks, rejects, snr_vals, names):
     n_images = len(datacube)
     xplots = int(np.around(np.sqrt(n_images)))
     yplots = xplots + 1

@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 import time
 from copy import deepcopy
-from func import convolve, savereg, grabcatname
+from func import commonbeam, savereg, grabcatname
 from astropy.utils.console import ProgressBar
 import argparse
 
@@ -19,7 +19,7 @@ def getrowindex(idx, pa, t):
     return int(np.intersect1d(np.where(t['_idx'] == idx), np.where(t['position_angle'] == pa)))
 
 
-def convolve_matches(table1, table2):
+def combine_matches(table1, table2):
     """
     Iterate through all stars in a stack of two tables, subtracting a test star's x and y from the rest of the catalog's x_cen and y_cen columns, sorting by x_cen, and testing distances starting at the top until the criterion is met."""
     complete_colnames = set(table1.colnames+table2.colnames)
@@ -54,11 +54,12 @@ def convolve_matches(table1, table2):
             match = deepcopy(stack[match_index])
             stack.remove_row(match_index)
             
-            # Convolve the match and the test star
+            # Find the common bounding ellipse between the match and the test star
             new_x_cen = np.average([match['x_cen'], teststar['x_cen']])
             new_y_cen = np.average([match['y_cen'], teststar['y_cen']])
             
-            new_major, new_minor, new_pa = convolve(match['major_fwhm']*u.deg, 
+            # REPLACE WITH COMMON BOUNDING ELLIPSE
+            new_major, new_minor, new_pa = commonbeam(match['major_fwhm']*u.deg, 
                                                     match['minor_fwhm']*u.deg, 
                                                     match['position_angle']*u.deg,
                                                     teststar['major_fwhm']*u.deg,
@@ -72,13 +73,12 @@ def convolve_matches(table1, table2):
             stack[i]['minor_fwhm'] = new_minor.value
             stack[i]['position_angle'] = new_pa.value
             
-            
             # Replace any masked data in the teststar row with available data from the match
             for k, masked in enumerate(stack.mask[i]):       # get masked fields
                 colname = stack.colnames[k]                 # get column name of masked fields
                 if masked:                                   # if masked:
-                    stack[i][colname] = match[colname]      # replace with data from the matched star
-                    
+                    stack[i][colname] = match[colname]       # replace with data from the matched star
+        
         i += 1
         pb.update()
         
@@ -88,11 +88,11 @@ def convolve_matches(table1, table2):
 def make_master_cat(catfilelist):
     tablelist = []
     for filename in catfilelist:
-        tablelist.append(Table.read(filename, format='ascii'))
+        tablelist.append(Table(Table.read(filename, format='ascii'), masked=True))
     
     current_table = tablelist[0]
     for i in range(len(tablelist)-1):
-        current_table = convolve_matches(current_table, tablelist[i+1])
+        current_table = combine_matches(current_table, tablelist[i+1])
     
     region = catfilelist[0].split('_region')[1].split('_band')[0]
     bands = [s.split('_band')[1] for s in list(filter(lambda x: x.startswith('dend_flux_band'), current_table.colnames))] # this is a disgusting hack but it works
@@ -119,6 +119,5 @@ if __name__ == '__main__':
     filelist = []
     for i in range(len(bands)):
         filelist.append(grabcatname(region, bands[i], flag='filtered'))
-    print(filelist)
     
     make_master_cat(filelist)

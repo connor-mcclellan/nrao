@@ -6,6 +6,7 @@ warnings.filterwarnings('ignore')
 import astropy.units as u
 from astropy.table import Table
 import pickle
+from radio_beam import Beams
 
 def grabfileinfo(region, band):
     """
@@ -41,22 +42,16 @@ def plot_grid(datacube, masks, rejects, snr_vals, names):
         plt.xticks([])
         plt.yticks([])
         
-def convolve(major1, minor1, pa1, major2, minor2, pa2):
-    alpha = ((major1 * np.cos(pa1))**2 + (minor1 * np.sin(pa1))**2 +
-             (major2 * np.cos(pa2))**2 + (minor2 * np.sin(pa2))**2)
-    beta = ((major1 * np.sin(pa1))**2 + (minor1 * np.cos(pa1))**2 +
-            (major2 * np.sin(pa2))**2 + (minor2 * np.cos(pa2))**2)
-    gamma = (2 * ((minor1**2 - major1**2) * np.sin(pa1) * np.cos(pa1) +
-                  (minor2**2 - major2**2) * np.sin(pa2) * np.cos(pa2)))
-    s = alpha + beta
-    t = np.sqrt((alpha - beta)**2 + gamma**2)
-    new_major = np.sqrt(0.5 * (s + t))
-    new_minor = np.sqrt(0.5 * (s - t))
-    if np.isclose(((abs(gamma) + abs(alpha - beta))**0.5).to(u.arcsec).value, 1e-7):
-        new_pa = 0.0 * u.deg
-    else:
-        new_pa = 0.5 * np.arctan2(-1. * gamma, alpha - beta)
-    return new_major, new_minor, new_pa
+def commonbeam(major1, minor1, pa1, major2, minor2, pa2):
+    """
+    Create a smallest bounding ellipse around two other ellipses. Give ellipse dimensions as astropy units quantities.
+    """
+    somebeams = Beams([major1.to(u.arcsec), major2.to(u.arcsec)] * u.arcsec, [minor1.to(u.arcsec), minor2.to(u.arcsec)] * u.arcsec, [pa1.to(u.deg), pa2.to(u.deg)] * u.deg)
+    common = somebeams.common_beam()
+    new_major = common._major
+    new_minor = common._minor
+    new_pa = common._pa
+    return new_major.to(u.deg), new_minor.to(u.deg), new_pa
 
 def savereg(cat, filename):
     with open(filename, 'w') as fh:

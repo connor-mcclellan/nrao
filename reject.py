@@ -156,7 +156,7 @@ def reject(imfile, catfile, threshold):
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
     bg_means = [m for m in mean_backgrounds if not rejects[mean_backgrounds.index(m)]]
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
-    catalog.add_column(np.invert(catalog.mask['snr_band'+band]), name='detected_band'+band)
+    catalog.add_column(np.invert(catalog.mask['snr_band'+band]).astype(int), name='detected_band'+band)
     catalog.add_column(Column(bg_means), name='meanbg_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 

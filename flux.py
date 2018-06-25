@@ -4,7 +4,7 @@ from astropy.io import fits
 
 def flux(region):
     # import the catalog file, get names of bands
-    filename = glob('mastercat_region{}*'.format(region))[0]
+    filename = glob('./cat/mastercat_region{}*'.format(region))[0]
     bands = filename.split('bands_')[1].split('.dat')[0].split('_')
     n = len(bands)
     

@@ -7,6 +7,7 @@ from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
 from func import savereg, grabfileinfo
+import argparse
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -87,7 +88,14 @@ def detect(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_np
 
 if __name__ == '__main__':
 
-    infilename, region, band, min_value, delta_fraction, min_npix = grabfileinfo('w51e2', 6)
+    parser = argparse.ArgumentParser(description='Detect sources in an image file using dendrograms')
+    parser.add_argument('region', metavar='region', type=str, help='name of the region as listed in "imgfileinfo.dat"')
+    parser.add_argument('band', metavar='band', type=int, help='integer representing the ALMA band of observation')
+    args = parser.parse_args()
+    region = str(args.region)
+    band = args.band
+    
+    infilename, _, _, min_value, delta_fraction, min_npix = grabfileinfo(region, band)
 
     print("Min value: ", min_value)
     print("Min delta: {:.5g}".format(min_value*delta_fraction))

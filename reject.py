@@ -12,6 +12,7 @@ from copy import deepcopy
 import radio_beam
 from func import rms, plot_grid, mask, grabfileinfo, grabcatname
 import regions
+import argparse
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -59,6 +60,7 @@ def reject(imfile, catfile, threshold):
     masks = []
     rejects = []
     snr_vals = []
+    mean_backgrounds = []
     
     for i in range(len(catalog)):
         x_cen = catalog['x_cen'][i] * u.deg
@@ -83,8 +85,7 @@ def reject(imfile, catfile, threshold):
         cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
         
         # Define the aperture regions needed for SNR
-        ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm, pix_minor_fwhm, angle=position_angle) # MAKE SURE YOU EDIT ASTROPY REGIONS BEFORE RUNNING THIS PART! More below:
-        # Assuming you're using regions 0.2, open anaconda3/pkgs/regions-0.2-py36_0/lib/python3.6/site-packages/regions/shapes/ellipse.py and in line 126 change "self.angle.to(u.deg).value," to "self.angle.to(u.rad).value,"
+        ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm*2., pix_minor_fwhm*2., angle=position_angle) # Make sure you're running the dev version of regions, otherwise the position angles will be in radians!
         
         innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
         outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
@@ -93,7 +94,7 @@ def reject(imfile, catfile, threshold):
         ellipse_mask = mask(ellipse_reg, cutout)
         annulus_mask = mask(outerann_reg, cutout) - mask(innerann_reg, cutout)
         
-        # Plot annulus regions
+        # Plot annulus and ellipse regions
         data_cube.append(cutout.data)
         graph_mask = deepcopy(annulus_mask) + ellipse_mask
         masks.append(graph_mask)
@@ -103,6 +104,9 @@ def reject(imfile, catfile, threshold):
         peak_flux = np.max(cutout.data[ellipse_mask.astype('bool')])
         flux_rms_ratio = peak_flux / bg_rms
         snr_vals.append(flux_rms_ratio)
+        
+        mean_background = np.average(cutout.data[annulus_mask.astype('bool')])
+        mean_backgrounds.append(mean_background)
         
         # Reject bad sources below some SNR threshold
         rejected = False
@@ -150,11 +154,21 @@ def reject(imfile, catfile, threshold):
     # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
+    bg_means = [m for m in mean_backgrounds if not rejects[mean_backgrounds.index(m)]]
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
     catalog.add_column(np.invert(catalog.mask['snr_band'+band]), name='detected_band'+band)
+    catalog.add_column(Column(bg_means), name='meanbg_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 
 if __name__ == '__main__':
-    imfile = grabfileinfo('w51e2', 3)[0]
-    catfile = grabcatname('w51e2', 3)
+
+    parser = argparse.ArgumentParser(description='Reject sources below some SNR threshold')
+    parser.add_argument('region', metavar='region', type=str, help='name of the region as listed in "imgfileinfo.dat"')
+    parser.add_argument('band', metavar='band', type=int, help='integer representing the ALMA band of observation')
+    args = parser.parse_args()
+    region = str(args.region)
+    band = args.band
+
+    imfile = grabfileinfo(region, band)[0]
+    catfile = grabcatname(region, band)
 reject(imfile, catfile, 6.)

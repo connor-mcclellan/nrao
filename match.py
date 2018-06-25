@@ -5,6 +5,7 @@ import time
 from copy import deepcopy
 from func import convolve, savereg, grabcatname
 from astropy.utils.console import ProgressBar
+import argparse
 
 
 def dist(x, y):
@@ -73,10 +74,11 @@ def convolve_matches(table1, table2):
             
             
             # Replace any masked data in the teststar row with available data from the match
-            for k, truth in enumerate(stack.mask[i]):       # get masked fields
+            for k, masked in enumerate(stack.mask[i]):       # get masked fields
                 colname = stack.colnames[k]                 # get column name of masked fields
-                if truth:                                   # if masked:
+                if masked:                                   # if masked:
                     stack[i][colname] = match[colname]      # replace with data from the matched star
+                    
         i += 1
         pb.update()
         
@@ -104,12 +106,19 @@ def make_master_cat(catfilelist):
         
 
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='Match sources between bands and produce a master catalog')
+    parser.add_argument('region', metavar='region', type=str, help='name of the region as listed in "imgfileinfo.dat"')
+    parser.add_argument('bands', metavar='bands', type=int, nargs='+', help='integers representing the ALMA bands of observation')
+    args = parser.parse_args()
+    region = str(args.region)
+    bands = sorted(args.bands)
     
-    region = 'w51e2'
-    bands = [3, 6]
+    print("Matching sources in region {} for bands {}".format(region, bands))
     
     filelist = []
     for i in range(len(bands)):
         filelist.append(grabcatname(region, bands[i], flag='filtered'))
+    print(filelist)
     
     make_master_cat(filelist)

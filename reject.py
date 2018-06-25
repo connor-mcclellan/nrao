@@ -151,6 +151,7 @@ def reject(imfile, catfile, threshold):
     catalog.remove_rows(rejects)
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
+    catalog.add_column(np.invert(catalog.mask['snr_band'+band]), name='detected_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 
 if __name__ == '__main__':

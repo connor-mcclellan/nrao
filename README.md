@@ -11,14 +11,17 @@
  - [X] Add ability to manually accept and reject sources
  - [X] Use astropy regions to create elliptical apertures / masks
  - [X] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
-    - Convolved ellipse properties
-    - Dendrogram fluxes in each band (when available, empty if not)\
+    - [ ] Common bounding ellipse properties
+    - [X] Dendrogram fluxes in each band (when available, empty if not)
+    - [ ] Peak fluxes in each band
+    - [X] Mean background in annulus in each band
  - [X] Rework how image files are read in, for easier switching between bands and regions
+ - [X] Enable argument parsing
  - [ ] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
-    - Convolved ellipse, averaged ellipse, fixed radius circle (of several radii)
-    - Noise level aperture sum for non-detections, to set an upper constraint (flagged?)
-    - Mean background flux (from annular regions) instead of background subtraction
+    - Common bounding ellipse, fixed radius circles of several radii
+    - Noise level aperture sum for non-detections, to set an upper constraint
  - [ ] Use final master catalog to create flux histograms
+ - [ ] Make flux v. flux plots with spectral index lines
  - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs
@@ -32,3 +35,4 @@
     - [SOLVED] The matched star's table data was being erased when trying to delete the matched star's row in the stacked table, so the program was trying to take an average using an empty table. Solved using deepcopy.
     - It reported an indexing error because the matched star is the last entry in the stacked column. Maybe in other cases where this happened, the iterator was taking the next row in front of the missing data?
 - Convolution for nearly identical ellipses returns a larger ellipse with position angle 0
+    - [AVOIDED] Convolution sucks anyway.

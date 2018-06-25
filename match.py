@@ -20,8 +20,7 @@ def getrowindex(idx, pa, t):
 
 def convolve_matches(table1, table2):
     """
-    Iterate through all stars in a stack of two tables, subtracting a test star's x and y from the rest of the catalog's x_cen and y_cen columns, sorting by y_cen, and testing distances starting at the top until the criterion is met. If the y distance exceeds the criterion, the loop terminates and no matches are found for that test star.
-    """
+    Iterate through all stars in a stack of two tables, subtracting a test star's x and y from the rest of the catalog's x_cen and y_cen columns, sorting by x_cen, and testing distances starting at the top until the criterion is met."""
     complete_colnames = set(table1.colnames+table2.colnames)
     stack = vstack([table1, table2])
     stack = stack[sorted(list(complete_colnames))]
@@ -74,10 +73,10 @@ def convolve_matches(table1, table2):
             
             
             # Replace any masked data in the teststar row with available data from the match
-            for k, truth in enumerate(stack.mask[i]):
-                colname = stack.colnames[k]
-                if truth:
-                    stack[i][colname] = match[colname]
+            for k, truth in enumerate(stack.mask[i]):       # get masked fields
+                colname = stack.colnames[k]                 # get column name of masked fields
+                if truth:                                   # if masked:
+                    stack[i][colname] = match[colname]      # replace with data from the matched star
         i += 1
         pb.update()
         

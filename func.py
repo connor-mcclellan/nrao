@@ -53,6 +53,15 @@ def commonbeam(major1, minor1, pa1, major2, minor2, pa2):
     new_pa = common._pa
     return new_major.to(u.deg), new_minor.to(u.deg), new_pa
 
+def apsum(region, cutout):
+    reg_mask = mask(region, cutout)
+    pixels = cutout.data[reg_mask.astype('bool')]
+    ap_rms = rms(pixels)
+    ap_sum = np.sum(pixels)
+    peak_flux = np.max(pixels)
+    
+    return ap_sum, ap_rms, peak_flux, reg_mask, len(pixels)
+
 def savereg(cat, filename):
     with open(filename, 'w') as fh:
         fh.write("icrs\n")

@@ -25,7 +25,7 @@ def combine_matches(table1, table2):
     complete_colnames = set(table1.colnames+table2.colnames)
     stack = vstack([table1, table2])
     stack = stack[sorted(list(complete_colnames))]
-    print('Convolving matches')
+    print('Combining matches')
     pb = ProgressBar(len(stack))
     i = 0
     while True:
@@ -75,12 +75,15 @@ def combine_matches(table1, table2):
             
             # Replace any masked data in the teststar row with available data from the match
             for k, masked in enumerate(stack.mask[i]):       # get masked fields
-                colname = stack.colnames[k]                 # get column name of masked fields
+                colname = stack.colnames[k]                  # get column name of masked fields
                 if masked:                                   # if masked:
                     stack[i][colname] = match[colname]       # replace with data from the matched star
-        
         i += 1
         pb.update()
+    
+    for colname in stack.colnames:                              # iterate over columns
+        if colname.split('_')[0] == 'detected':                 # if it's a detection column
+            stack[colname].fill_value = 0                       # replace masked values with 0 (False)
         
     return stack
 

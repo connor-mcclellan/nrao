@@ -38,6 +38,9 @@ def reject(imfile, catfile, threshold):
     pixel_scale = np.abs(mywcs.pixel_scale_matrix.diagonal().prod())**0.5 * u.deg
     ppbeam = (beam.sr/(pixel_scale**2)).decompose().value
     
+    data = data/ppbeam
+    
+    # Remove existing region files
     if os.path.isfile('./reg/reg_'+outfile+'_annulus.reg'):
         os.remove('./reg/reg_'+outfile+'_annulus.reg')
     if os.path.isfile('./reg/reg_'+outfile+'_filtered.reg'):
@@ -171,4 +174,4 @@ if __name__ == '__main__':
 
     imfile = grabfileinfo(region, band)[0]
     catfile = grabcatname(region, band)
-reject(imfile, catfile, 6.)
+    reject(imfile, catfile, 6.)

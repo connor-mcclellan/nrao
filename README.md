@@ -11,7 +11,7 @@
  - [X] Add ability to manually accept and reject sources
  - [X] Use astropy regions to create elliptical apertures / masks
  - [X] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
-    - [ ] Common bounding ellipse properties
+    - [X] Common bounding ellipse properties
     - [X] Dendrogram fluxes in each band (when available, empty if not)
     - [ ] Peak fluxes in each band
     - [X] Mean background in annulus in each band
@@ -36,3 +36,5 @@
     - It reported an indexing error because the matched star is the last entry in the stacked column. Maybe in other cases where this happened, the iterator was taking the next row in front of the missing data?
 - Convolution for nearly identical ellipses returns a larger ellipse with position angle 0
     - [AVOIDED] Convolution sucks anyway.
+- Trying to find where both "detected_bandX" fields are true returns all the rows of the master catalog.
+    - [SOLVED] The "detected_bandX" columns are now binary (0 or 1) instead of boolean (True or False). The astropy table was storing the boolean as a string ('True' or 'Fals'), so that if you say `np.where(table['detected_bandX'])`, it would find data in every field since they're all strings, and return everywhere.

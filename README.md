@@ -13,15 +13,17 @@
  - [X] Take union of detected sources between images to create source IDs and master catalog, so that flux measurements can be made consistently across bands
     - [X] Common bounding ellipse properties
     - [X] Dendrogram fluxes in each band (when available, empty if not)
-    - [ ] Peak fluxes in each band
+    - [X] Peak fluxes in each band
     - [X] Mean background in annulus in each band
  - [X] Rework how image files are read in, for easier switching between bands and regions
  - [X] Enable argument parsing
- - [ ] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
+ - [X] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
     - Common bounding ellipse, fixed radius circles of several radii
     - Noise level aperture sum for non-detections, to set an upper constraint
  - [ ] Use final master catalog to create flux histograms
  - [ ] Make flux v. flux plots with spectral index lines
+     - [X] Include error bars
+     - [ ] Log scale
  - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs

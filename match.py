@@ -26,12 +26,17 @@ def combine_matches(table1, table2):
     stack = vstack([table1, table2])
     stack = stack[sorted(list(complete_colnames))]
     print('Combining matches')
-    pb = ProgressBar(len(stack))
+    numbefore = len(stack[np.where(stack['rejected']==0)])
+    pb = ProgressBar(numbefore)
     i = 0
     while True:
         if i == len(stack)-1:
             break
-       
+            
+        if stack[i]['rejected'] == 1:
+            i += 1
+            continue
+            
         teststar = stack[i]
         diff_table = vstack([stack[:i], stack[i+1:]])['_idx', 'x_cen', 'y_cen', 'position_angle']
         diff_table['x_cen'] = np.abs(diff_table['x_cen'] - teststar['x_cen'])
@@ -85,8 +90,8 @@ def combine_matches(table1, table2):
         if colname.split('_')[0] == 'detected':                 # if it's a detection column
             stack[colname].fill_value = 0                       # replace masked values with 0 (False)
     
-    stack.sort('_idx')
-    stack['idx'] = range(len(stack))
+    numafter = len(stack[np.where(stack['rejected']==0)])
+    print("\n{} matches combined".format(numbefore-numafter))
     return stack
 
     

@@ -27,12 +27,15 @@ def flux(region):
     circ2_npix_col = MaskedColumn(length=len(catalog), name='circ2_npix', mask=True)
     circ3_npix_col = MaskedColumn(length=len(catalog), name='circ3_npix', mask=True)
     
+    n_rejected = 0
     
     for i in range(n_bands):
         
+        band = bands[i]
+        
         # Load image file for this band
-        print("\nLoading image file for region {} in band {} (Image {}/{})".format(region, bands[i], i+1, n_bands))
-        imfile = grabfileinfo(region, bands[i])[0]
+        print("\nLoading image file for region {} in band {} (Image {}/{})".format(region, band, i+1, n_bands))
+        imfile = grabfileinfo(region, band)[0]
         contfile = fits.open(imfile)
         data = contfile[0].data.squeeze()
         
@@ -45,26 +48,31 @@ def flux(region):
         data = data/ppbeam
         
         # Set up columns for each aperture
-        peak_flux_col = MaskedColumn(length=len(catalog), name='peak_flux_band{}'.format(bands[i]), mask=True)
-        annulus_median_col = MaskedColumn(length=len(catalog), name='annulus_median_band{}'.format(bands[i]), mask=True)
-        annulus_rms_col = MaskedColumn(length=len(catalog), name='annulus_rms_band{}'.format(bands[i]), mask=True)
-        ellipse_flux_col = MaskedColumn(length=len(catalog), name='ellipse_flux_band{}'.format(bands[i]), mask=True)
-        circ1_flux_col = MaskedColumn(length=len(catalog), name='circ1_flux_band{}'.format(bands[i]), mask=True)
-        circ2_flux_col = MaskedColumn(length=len(catalog), name='circ2_flux_band{}'.format(bands[i]), mask=True)
-        circ3_flux_col = MaskedColumn(length=len(catalog), name='circ3_flux_band{}'.format(bands[i]), mask=True)
+        peak_flux_col = MaskedColumn(length=len(catalog), name='peak_flux_band{}'.format(band), mask=True)
+        annulus_median_col = MaskedColumn(length=len(catalog), name='annulus_median_band{}'.format(band), mask=True)
+        annulus_rms_col = MaskedColumn(length=len(catalog), name='annulus_rms_band{}'.format(band), mask=True)
+        ellipse_flux_col = MaskedColumn(length=len(catalog), name='ellipse_flux_band{}'.format(band), mask=True)
+        circ1_flux_col = MaskedColumn(length=len(catalog), name='circ1_flux_band{}'.format(band), mask=True)
+        circ2_flux_col = MaskedColumn(length=len(catalog), name='circ2_flux_band{}'.format(band), mask=True)
+        circ3_flux_col = MaskedColumn(length=len(catalog), name='circ3_flux_band{}'.format(band), mask=True)
         
-        ellipse_rms_col = MaskedColumn(length=len(catalog), name='ellipse_rms_band{}'.format(bands[i]), mask=True)
-        circ1_rms_col = MaskedColumn(length=len(catalog), name='circ1_rms_band{}'.format(bands[i]), mask=True)
-        circ2_rms_col = MaskedColumn(length=len(catalog), name='circ2_rms_band{}'.format(bands[i]), mask=True)
-        circ3_rms_col = MaskedColumn(length=len(catalog), name='circ3_rms_band{}'.format(bands[i]), mask=True)
+        ellipse_rms_col = MaskedColumn(length=len(catalog), name='ellipse_rms_band{}'.format(band), mask=True)
+        circ1_rms_col = MaskedColumn(length=len(catalog), name='circ1_rms_band{}'.format(band), mask=True)
+        circ2_rms_col = MaskedColumn(length=len(catalog), name='circ2_rms_band{}'.format(band), mask=True)
+        circ3_rms_col = MaskedColumn(length=len(catalog), name='circ3_rms_band{}'.format(band), mask=True)
         
         circ1_r, circ2_r, circ3_r = 10, 15, 25
         
         print('Photometering sources')
-        pb = ProgressBar(n_rows)
+        pb = ProgressBar(len(catalog[np.where(catalog['rejected']==0)]))
+        
         
         # Iterate over sources, extracting ellipse parameters
         for j in range(n_rows):
+        
+            if catalog['rejected'][j] == 1:
+                continue
+        
             source = catalog[j]
             x_cen = source['x_cen']*u.deg
             y_cen = source['y_cen']*u.deg
@@ -96,8 +104,8 @@ def flux(region):
             circ2_reg = regions.CirclePixelRegion(cutout_center, circ2_r)
             circ3_reg = regions.CirclePixelRegion(cutout_center, circ3_r)
             
-            innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
-            outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
+            innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major)
+            outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major+annulus_width)
             
             annulus_mask = mask(outerann_reg, cutout) - mask(innerann_reg, cutout)
             
@@ -125,8 +133,11 @@ def flux(region):
             annulus_median_col[j] = annulus_median
             annulus_rms_col[j] = annulus_rms
             
-            catalog['snr_band'+band][i] = peak_flux/annulus_rms
+            catalog['snr_band'+str(band)][j] = peak_flux/annulus_rms
             
+            if ellipse_flux <= annulus_median*ellipse_npix:
+                catalog['rejected'][j] = 1
+                n_rejected += 1
             pb.update()
     
         # add columns to catalog
@@ -137,6 +148,7 @@ def flux(region):
                              circ3_flux_col, circ3_rms_col,])
                              
     catalog.add_columns([ellipse_npix_col, circ1_npix_col, circ2_npix_col, circ3_npix_col])
+    print("\n{} sources flagged for secondary rejection".format(n_rejected))
     
     # save catalog
     catalog = catalog[sorted(catalog.colnames)]

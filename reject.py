@@ -53,8 +53,8 @@ def reject(imfile, catfile, threshold):
         override_accepted = np.loadtxt('./.override/accept_'+outfile+'.txt').astype('int')
     if os.path.isfile('./.override/reject_'+outfile+'.txt'):
         override_rejected = np.loadtxt('./.override/reject_'+outfile+'.txt').astype('int')
-    print("\nManually accepted sources: ", override_accepted)
-    print("Manually rejected sources: ", override_rejected)
+    print("\nManually accepted sources: ", set(override_accepted))
+    print("Manually rejected sources: ", set(override_rejected))
     
     print('\nCalculating RMS values within aperture annuli')
     pb = ProgressBar(len(catalog))
@@ -118,7 +118,7 @@ def reject(imfile, catfile, threshold):
             rejected = False
         if catalog['_idx'][i] in override_rejected:
             rejected = True
-        rejects.append(rejected)
+        rejects.append(int(rejected))
         
         # Add non-rejected source ellipses to a new region file
         fname = './reg/reg_'+outfile+'_filtered.reg'
@@ -149,13 +149,19 @@ def reject(imfile, catfile, threshold):
     with open(fname, 'a') as fh:
         for num in rejected_list:
             fh.write('\n'+str(num))
-    print("Manual overrides written to './.override/'. New overrides will take effect the next time the rejection script is run.")
+    print("Manual overrides written to './.override/' and saved to source catalog. New overrides will be displayed the next time the rejection script is run.")
     
-    # Save the filtered catalog with new columns for SNR
-    catalog.remove_rows(rejects)
-    snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
+    # Process the new overrides, to be saved into the catalog
+    rejects = np.array(rejects)
+    acc = np.array([a[-2:] for a in accepted_list], dtype=int)
+    rej = np.array([r[-2:] for r in rejected_list], dtype=int)
+    rejects[acc] = 0
+    rejects[rej] = 1
+
+    # Save the catalog with new columns for SNR
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
     catalog.add_column(np.invert(catalog.mask['snr_band'+band]).astype(int), name='detected_band'+band)
+    catalog.add_column(Column(rejects), name='rejected')
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 
 if __name__ == '__main__':

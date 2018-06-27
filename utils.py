@@ -12,7 +12,7 @@ def grabfileinfo(region, band):
     """
     Searches the imgfileinfo.dat file for the image with the given region and band. Returns a 6-element tuple with structure (filename, region, band, min_value, delt_frac, min_npix).
     """
-    f = Table.read('./imgfileinfo.dat', format='ascii')
+    f = Table.read('./.imgfileinfo.dat', format='ascii')
     info = f[np.intersect1d(np.where(f['region'] == region), np.where(f['band'] == band))]
     return tuple(info[0])
 

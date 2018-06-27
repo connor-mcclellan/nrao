@@ -10,7 +10,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from copy import deepcopy
 import radio_beam
-from func import rms, plot_grid, mask, grabfileinfo, grabcatname
+from utils import rms, plot_grid, mask, grabfileinfo, grabcatname
 import regions
 import argparse
 import warnings
@@ -49,10 +49,10 @@ def reject(imfile, catfile, threshold):
     # Load in manually accepted and rejected sources
     override_accepted = []
     override_rejected = []
-    if os.path.isfile('./override/accept_'+outfile+'.txt'):
-        override_accepted = np.loadtxt('./override/accept_'+outfile+'.txt').astype('int')
-    if os.path.isfile('./override/reject_'+outfile+'.txt'):
-        override_rejected = np.loadtxt('./override/reject_'+outfile+'.txt').astype('int')
+    if os.path.isfile('./.override/accept_'+outfile+'.txt'):
+        override_accepted = np.loadtxt('./.override/accept_'+outfile+'.txt').astype('int')
+    if os.path.isfile('./.override/reject_'+outfile+'.txt'):
+        override_rejected = np.loadtxt('./.override/reject_'+outfile+'.txt').astype('int')
     print("\nManually accepted sources: ", override_accepted)
     print("Manually rejected sources: ", override_rejected)
     
@@ -117,9 +117,9 @@ def reject(imfile, catfile, threshold):
             rejected = True
         
         # Process manual overrides
-        if i in override_accepted:
+        if catalog['_idx'][i] in override_accepted:
             rejected = False
-        if i in override_rejected:
+        if catalog['_idx'][i] in override_rejected:
             rejected = True
         rejects.append(rejected)
         
@@ -133,26 +133,26 @@ def reject(imfile, catfile, threshold):
         pb.update()
     
     # Plot the grid of sources
-    plot_grid(data_cube, masks, rejects, snr_vals, range(len(catalog)))
+    plot_grid(data_cube, masks, rejects, snr_vals, catalog['_idx'])
     plt.suptitle('region={}, band={}, min_value={}, min_delta={}, min_npix={}, threshold={:.4f}'.format(region, band, min_value, min_delta, min_npix, threshold))  
-    print('Manual overrides example: type "r19, a5" to manually reject source #19 and accept source #5.')
-    plt.show()
+    plt.show(block=False)
     
     # Get overrides from user
-    overrides = input("\nType manual override list, or press enter to confirm.\n").split(', ')
+    print('Manual overrides example: type "r319, a605" to manually reject source #319 and accept source #605.')
+    overrides = input("\nType manual override list, or press enter to continue:\n").split(', ')
     accepted_list = [s[1:] for s in list(filter(lambda x: x.startswith('a'), overrides))]
     rejected_list = [s[1:] for s in list(filter(lambda x: x.startswith('r'), overrides))]
     
     # Save the manually accepted and rejected sources
-    fname = './override/accept_'+outfile+'.txt'
+    fname = './.override/accept_'+outfile+'.txt'
     with open(fname, 'a') as fh:
         for num in accepted_list:
             fh.write('\n'+str(num))
-    fname = './override/reject_'+outfile+'.txt'
+    fname = './.override/reject_'+outfile+'.txt'
     with open(fname, 'a') as fh:
         for num in rejected_list:
             fh.write('\n'+str(num))
-    print("Manual overrides written to './override/'. New overrides will take effect the next time the rejection script is run.")
+    print("Manual overrides written to './.override/'. New overrides will take effect the next time the rejection script is run.")
     
     # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)

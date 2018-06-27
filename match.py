@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 import time
 from copy import deepcopy
-from func import commonbeam, savereg, grabcatname
+from utils import commonbeam, savereg, grabcatname
 from astropy.utils.console import ProgressBar
 import argparse
 
@@ -84,7 +84,9 @@ def combine_matches(table1, table2):
     for colname in stack.colnames:                              # iterate over columns
         if colname.split('_')[0] == 'detected':                 # if it's a detection column
             stack[colname].fill_value = 0                       # replace masked values with 0 (False)
-        
+    
+    stack.sort('_idx')
+    stack['idx'] = range(len(stack))
     return stack
 
     
@@ -104,6 +106,7 @@ def make_master_cat(catfilelist):
         bandstring += '_{}'.format(band)
     
     # Save catalog and region files
+    current_table.sort('y_cen')
     current_table.write('./cat/mastercat_region{}_bands{}.dat'.format(region, bandstring), format='ascii')
     savereg(current_table, './reg/masterreg_region{}_bands{}.reg'.format(region, bandstring))
         

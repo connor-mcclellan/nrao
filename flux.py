@@ -1,12 +1,11 @@
 from glob import glob
-from func import grabfileinfo
 from astropy.io import fits
 from astropy.table import Table, MaskedColumn
 import regions
 import astropy.units as u
 from astropy import coordinates
 from astropy.nddata.utils import Cutout2D, NoOverlapError
-from func import rms, mask, apsum
+from utils import rms, mask, apsum, grabfileinfo
 import argparse
 import numpy as np
 from astropy import wcs
@@ -123,6 +122,7 @@ def flux(region):
     catalog.add_columns([ellipse_npix_col, circ1_npix_col, circ2_npix_col, circ3_npix_col])
     
     # save catalog
+    catalog = catalog[sorted(catalog.colnames)]
     catalog.write(filename.split('.dat')[0]+'_photometered.dat', format='ascii')
     print("\nMaster catalog saved as '{}'".format(filename.split('.dat')[0]+'_photometered.dat'))
     

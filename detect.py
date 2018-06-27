@@ -48,6 +48,10 @@ def detect(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_np
     cat.rename_column('minor_sigma', 'minor_fwhm')
     cat.rename_column('flux', 'dend_flux_band{}'.format(band))
     
+    # Rename _idx to include the band number in the hundreds digit
+    for i in range(len(cat)):
+        cat['_idx'][i] = int('{}{:02d}'.format(band, cat['_idx'][i]))
+    
     # Output the catalog and region files
     cat.write('./cat/cat_'+outfile+'.dat', format='ascii')
     savereg(cat, './reg/reg_'+outfile+'.reg')

@@ -108,9 +108,6 @@ def reject(imfile, catfile, threshold):
         flux_rms_ratio = peak_flux / bg_rms
         snr_vals.append(flux_rms_ratio)
         
-        mean_background = np.average(cutout.data[annulus_mask.astype('bool')])
-        mean_backgrounds.append(mean_background)
-        
         # Reject bad sources below some SNR threshold
         rejected = False
         if flux_rms_ratio <= threshold:
@@ -157,10 +154,8 @@ def reject(imfile, catfile, threshold):
     # Save the filtered catalog with new columns for SNR
     catalog.remove_rows(rejects)
     snr_vals = [s for s in snr_vals if not rejects[snr_vals.index(s)]]
-    bg_means = [m for m in mean_backgrounds if not rejects[mean_backgrounds.index(m)]]
     catalog.add_column(Column(snr_vals), name='snr_band'+band)
     catalog.add_column(np.invert(catalog.mask['snr_band'+band]).astype(int), name='detected_band'+band)
-    catalog.add_column(Column(bg_means), name='meanbg_band'+band)
     catalog.write('./cat/cat_'+outfile+'_filtered.dat', format='ascii')
 
 if __name__ == '__main__':

@@ -20,10 +20,12 @@
  - [X] Use master catalog to photometer sources in all bands, adding new columns to the master catalog for each type of aperture and each band
     - Common bounding ellipse, fixed radius circles of several radii
     - Noise level aperture sum for non-detections, to set an upper constraint
- - [ ] Use final master catalog to create flux histograms
- - [ ] Make flux v. flux plots with spectral index lines
+ - [X] Make flux v. flux plots with spectral index lines
      - [X] Include error bars
-     - [ ] Log scale
+     - [X] Log scale
+ - [ ] Incorporated 'rejected' and 'accepted' as columns in the source catalog, so that sources can be rejected at any point in the procedure
+ - [ ] Reject sources that have aperture sum lower than `annulus_median*aperture_npix`
+ - [ ] Use final master catalog to create flux histograms
  - [ ] Repeat analysis on W51IRS2, AKA W51n
 
 ## Bugs

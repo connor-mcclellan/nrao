@@ -46,7 +46,8 @@ def flux(region):
         
         # Set up columns for each aperture
         peak_flux_col = MaskedColumn(length=len(catalog), name='peak_flux_band{}'.format(bands[i]), mask=True)
-        
+        annulus_median_col = MaskedColumn(length=len(catalog), name='annulus_median_band{}'.format(bands[i]), mask=True)
+        annulus_rms_col = MaskedColumn(length=len(catalog), name='annulus_rms_band{}'.format(bands[i]), mask=True)
         ellipse_flux_col = MaskedColumn(length=len(catalog), name='ellipse_flux_band{}'.format(bands[i]), mask=True)
         circ1_flux_col = MaskedColumn(length=len(catalog), name='circ1_flux_band{}'.format(bands[i]), mask=True)
         circ2_flux_col = MaskedColumn(length=len(catalog), name='circ2_flux_band{}'.format(bands[i]), mask=True)
@@ -57,7 +58,7 @@ def flux(region):
         circ2_rms_col = MaskedColumn(length=len(catalog), name='circ2_rms_band{}'.format(bands[i]), mask=True)
         circ3_rms_col = MaskedColumn(length=len(catalog), name='circ3_rms_band{}'.format(bands[i]), mask=True)
         
-        circ1_r, circ2_r, circ3_r = 30, 50, 70
+        circ1_r, circ2_r, circ3_r = 10, 15, 25
         
         print('Photometering sources')
         pb = ProgressBar(n_rows)
@@ -70,6 +71,9 @@ def flux(region):
             major = source['major_fwhm']*u.deg
             minor = source['minor_fwhm']*u.deg
             pa = source['position_angle']*u.deg
+            
+            annulus_width = 15
+            center_distance = 10
             
             # Convert to pixel coordinates
             position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
@@ -92,11 +96,19 @@ def flux(region):
             circ2_reg = regions.CirclePixelRegion(cutout_center, circ2_r)
             circ3_reg = regions.CirclePixelRegion(cutout_center, circ3_r)
             
+            innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
+            outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
+            
+            annulus_mask = mask(outerann_reg, cutout) - mask(innerann_reg, cutout)
+            
             # get flux information from regions
             ellipse_flux, ellipse_rms, peak_flux, ellipse_mask, ellipse_npix = apsum(ellipse_reg, cutout)
             circ1_flux, circ1_rms, _, circ1_mask, circ1_npix = apsum(circ1_reg, cutout)
             circ2_flux, circ2_rms, _, circ2_mask, circ2_npix = apsum(circ2_reg, cutout)
             circ3_flux, circ3_rms, _, circ3_mask, circ3_npix = apsum(circ3_reg, cutout)
+            
+            annulus_rms = rms(cutout.data[annulus_mask.astype('bool')])
+            annulus_median = np.median(cutout.data[annulus_mask.astype('bool')])
             
             # add fluxes to appropriate columns
             peak_flux_col[j] = peak_flux
@@ -109,6 +121,11 @@ def flux(region):
             circ1_npix_col[j] = circ1_npix
             circ2_npix_col[j] = circ2_npix
             circ3_npix_col[j] = circ3_npix
+            
+            annulus_median_col[j] = annulus_median
+            annulus_rms_col[j] = annulus_rms
+            
+            catalog['snr_band'+band][i] = peak_flux/annulus_rms
             
             pb.update()
     

@@ -6,7 +6,7 @@ import radio_beam
 from astropy import wcs
 import numpy as np
 from matplotlib import pyplot as plt
-from func import savereg, grabfileinfo
+from utils import savereg, grabfileinfo
 import argparse
 import warnings
 warnings.filterwarnings('ignore')

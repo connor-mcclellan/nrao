@@ -105,7 +105,7 @@ def make_master_cat(catfilelist):
         current_table = combine_matches(current_table, tablelist[i+1])
     
     region = catfilelist[0].split('_region')[1].split('_band')[0]
-    bands = [s.split('_band')[1] for s in list(filter(lambda x: x.startswith('dend_flux_band'), current_table.colnames))] # this is a disgusting hack but it works
+    bands = grabbands(current_table)
     bandstring = ''
     for band in bands:
         bandstring += '_{}'.format(band)

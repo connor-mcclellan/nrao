@@ -1,9 +1,8 @@
-from utils import grabcatname
+from utils import grabfileinfo
 from astropy.table import Table
 import matplotlib.pyplot as plt
 import numpy as np
 from glob import glob
-from utils import grabfileinfo
 import matplotlib.gridspec as gs
 import argparse
 
@@ -33,11 +32,7 @@ def ffplot(region, shapes, band1, band2, log=True, label=True, grid=True):
     nu2, ppbeam2 = grabfileinfo(region, band2)[-2:]
     
     # Filter to rows where all values the user needs for plotting are unmasked
-    cols = []
-    for shape in shapes:
-        cols.extend(('{}_flux_band{}'.format(shape, band1), '{}_flux_band{}'.format(shape, band2), shape+'_npix'))
-    index = list(set(range(len(t)))^set(np.nonzero(t.mask[cols])[0]).union(set(np.where(t['rejected']==1)[0])))   # only get rows where all values under each column in 'cols' are unmasked
-    t = t[index]
+    t = filter_masked(t, shapes)
     
     # Grab the flux data
     flux_band1 = []

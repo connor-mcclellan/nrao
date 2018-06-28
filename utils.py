@@ -24,6 +24,21 @@ def grabcatname(region, band, flag=''):
         catfile = './cat/cat_region{}_band{}_val{}_delt{:.5g}_pix{}.dat'.format(region, band, val, delt_frac*val, pix)
     return catfile
     
+def grabbands(catalog):
+    bands = [s.split('_band')[1] for s in list(filter(lambda x: x.startswith('dend_flux_band'), catalog.colnames))]
+    return bands
+
+def filter_masked(catalog, shapes):
+    """From a source catalog, takes only non-rejected sources that have unmasked flux values under all specified aperture shapes."""
+    bands = grabbands(catalog)
+    cols = []
+    for shape in shapes:
+        cols.append(shape+'_npix')
+        for band in bands:
+            cols.append('{}_flux_band{}'.format(shape, band))
+    index = list(set(range(len(catalog)))^set(np.nonzero(catalog.mask[cols])[0]).union(set(np.where(catalog['rejected']==1)[0])))
+    return catalog[index]
+
 def plot_grid(datacube, masks, rejects, snr_vals, names):
     n_images = len(datacube)
     xplots = int(np.around(np.sqrt(n_images)))

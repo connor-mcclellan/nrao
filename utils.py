@@ -10,7 +10,7 @@ from radio_beam import Beams
 
 def grabfileinfo(region, band):
     """
-    Searches the imgfileinfo.dat file for the image with the given region and band. Returns a 6-element tuple with structure (filename, region, band, min_value, delt_frac, min_npix).
+    Searches the imgfileinfo.dat file for the image with the given region and band. Returns an 8-element tuple with structure (filename, region, band, min_value, delt_frac, min_npix, nu, ppbeam).
     """
     f = Table.read('./.imgfileinfo.dat', format='ascii')
     info = f[np.intersect1d(np.where(f['region'] == region), np.where(f['band'] == band))]

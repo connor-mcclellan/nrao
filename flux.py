@@ -135,7 +135,8 @@ def flux(region):
             
             catalog['snr_band'+str(band)][j] = peak_flux/annulus_rms
             
-            if ellipse_flux <= annulus_median*ellipse_npix:
+            lowest_flux = np.min([ellipse_flux, circ1_flux, circ2_flux, circ3_flux])
+            if lowest_flux <= annulus_median*ellipse_npix or lowest_flux < 0:
                 catalog['rejected'][j] = 1
                 n_rejected += 1
             pb.update()
@@ -147,7 +148,7 @@ def flux(region):
                              circ2_flux_col, circ2_rms_col,
                              circ3_flux_col, circ3_rms_col,])
                              
-    catalog.add_columns([ellipse_npix_col, circ1_npix_col, circ2_npix_col, circ3_npix_col])
+    catalog.add_columns([ellipse_npix_col, circ1_npix_col, circ2_npix_col, circ3_npix_col, annulus_median_col, annulus_rms_col])
     print("\n{} sources flagged for secondary rejection".format(n_rejected))
     
     # save catalog

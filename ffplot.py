@@ -3,14 +3,9 @@ from astropy.table import Table
 import matplotlib.pyplot as plt
 import numpy as np
 from glob import glob
-
-# work this in as an imgfileinfo.dat column
-ppbeam1 = 125.0926865069147 # band 3
-ppbeam2 = 101.7249966753436 # band 6
-
-# work this in as an imgfileinfo.dat column
-nu6 = 226092028953.4
-nu3 = 92982346121.92
+from utils import grabfileinfo
+import matplotlib.gridspec as gs
+import argparse
 
 # Dendrogram (abandoned code, rework in if shape=='dendrogram')
 # gets rows only where dendrogram entries are unmasked
@@ -26,46 +21,105 @@ namedict = {
 def specindex(nu1, nu2, f2, alpha):
     return f2*(nu1/nu2)**alpha
 
-# Tomorrow: make this so you can plot each set of aperture sums (differing in shape) on the same plot in different colors
-def ffplot(region, shape, band1, band2, nu1, nu2, log=True):
+
+def ffplot(region, shapes, band1, band2, log=True, label=True, grid=True):
+
+    colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
     filename = glob('./cat/mastercat_region{}*_photometered.dat'.format(region))[0]
     t = Table(Table.read(filename, format='ascii'), masked=True)
     
-    # this needs a rework -- test only the columns the user needs data from
-    cols = ['peak_flux_band3', 'ellipse_flux_band3',  'ellipse_rms_band3', 'circ1_flux_band3', 'circ1_rms_band3', 'circ2_flux_band3', 'circ2_rms_band3', 'circ3_flux_band3', 'circ3_rms_band3', 'peak_flux_band6', 'ellipse_flux_band6', 'ellipse_rms_band6', 'circ1_flux_band6', 'circ1_rms_band6', 'circ2_flux_band6', 'circ2_rms_band6', 'circ3_flux_band6', 'circ3_rms_band6']
-    index = list(set(range(len(t)))^set(np.nonzero(t.mask[cols])[0]))
+    # get nu1, nu2, ppbeam1, ppbeam2 from imgfileinfo.dat
+    nu1, ppbeam1 = grabfileinfo(region, band1)[-2:]
+    nu2, ppbeam2 = grabfileinfo(region, band2)[-2:]
+    
+    # Filter to rows where all values the user needs for plotting are unmasked
+    cols = []
+    for shape in shapes:
+        cols.extend(('{}_flux_band{}'.format(shape, band1), '{}_flux_band{}'.format(shape, band2), shape+'_npix'))
+    index = list(set(range(len(t)))^set(np.nonzero(t.mask[cols])[0]).union(set(np.where(t['rejected']==1)[0])))   # only get rows where all values under each column in 'cols' are unmasked
     t = t[index]
     
-    flux_band1 = t[shape+'_flux_band'+str(band1)]
-    flux_band2 = t[shape+'_flux_band'+str(band2)]
-    npix = t[shape+'_npix']
+    # Grab the flux data
+    flux_band1 = []
+    flux_band2 = []
+    npix = []
+    for shape in shapes:
+        flux_band1.append(t[shape+'_flux_band'+str(band1)])
+        flux_band2.append(t[shape+'_flux_band'+str(band2)])
+        npix.append(t[shape+'_npix'])
     marker_labels = t['_idx']
+    
+    specindex_xflux = np.linspace(np.min(flux_band1), np.max(flux_band1), 10)
+    specindex2_yflux = specindex(nu2, nu1, specindex_xflux, 2)
+    specindex3_yflux = specindex(nu2, nu1, specindex_xflux, 3)
 
-    xfluxes = np.linspace(np.min(flux_band1), np.max(flux_band1), 100)
-    yfluxes2 = specindex(nu2, nu1, xfluxes, 2)
-    yfluxes3 = specindex(nu2, nu1, xfluxes, 3)
-
-    plt.figure()
-    plt.errorbar(flux_band1, flux_band2, xerr=flux_band1/np.sqrt(npix/ppbeam1), yerr=flux_band2/np.sqrt(npix/ppbeam2), fmt='o', ms=2, color='k', elinewidth=0.5, label=None)
-    plt.plot(xfluxes, yfluxes2, label='Spectral Index = 2')
-    plt.plot(xfluxes, yfluxes3, label='Spectral Index = 3')
-
-    for i, label in enumerate(marker_labels):
-        plt.annotate(label, (flux_band1[i], flux_band2[i]), size=8)
-
-    if log:
-        plt.xlabel('Log Band {} Flux'.format(band1))
-        plt.ylabel('Log Band {} Flux'.format(band2))
-        plt.xscale('log')
-        plt.yscale('log')
+    # ------ PLOTTING ------
+    if grid:
+        n_images = len(shapes)
+        xplots = int(np.around(np.sqrt(n_images)))
+        yplots = xplots
+        fig, axes = plt.subplots(ncols=yplots, nrows=xplots, figsize=(12, 12))
+        for i in range(len(shapes)):
+            ax = np.ndarray.flatten(axes)[i]
+            ax.errorbar(flux_band1[i], flux_band2[i], xerr=flux_band1[i]/np.sqrt(npix[i]/ppbeam1), yerr=flux_band2[i]/np.sqrt(npix[i]/ppbeam2), fmt='o', ms=2, alpha=0.75, elinewidth=0.5, color=colors[i], label='{} Apertures'.format(namedict[shapes[i]]))
+            ax.plot(specindex_xflux, specindex2_yflux, '--', color='k', label='Spectral Index = 2')
+            ax.plot(specindex_xflux, specindex3_yflux, '--', color='purple', label='Spectral Index = 3')
+            ax.set_xticks([])
+            ax.set_yticks([])
+                 
+            ax.set_xlim([.6*np.min(flux_band1), 1.4*np.max(flux_band1)])
+            ax.set_ylim([.1*np.min(flux_band2), 1.9*np.max(flux_band2)])
+            
+            if label:
+                for j, label in enumerate(marker_labels):
+                    ax.annotate(label, (flux_band1[i][j], flux_band2[i][j]), size=8)
+            if log:
+                ax.set_xlabel('Log Band {} Flux'.format(band1))
+                ax.set_ylabel('Log Band {} Flux'.format(band2))
+                ax.set_xscale('log')
+                ax.set_yscale('log')
+            else:
+                ax.set_xlabel('Band {} Flux'.format(band1))
+                ax.set_ylabel('Band {} Flux'.format(band2))
+            ax.legend()
     else:
-        plt.xlabel('Band {} Flux'.format(band1))
-        plt.ylabel('Band {} Flux'.format(band2))
-        
-    plt.title('Flux v. Flux in Bands {} and {} with {} Apertures'.format(band1, band2, namedict[shape]))
-    plt.legend()
+        plt.figure()
+        for i in range(len(shapes)):
+            plt.errorbar(flux_band1[i], flux_band2[i], xerr=flux_band1[i]/np.sqrt(npix[i]/ppbeam1), yerr=flux_band2[i]/np.sqrt(npix[i]/ppbeam2), fmt='o', ms=2, alpha=0.75, elinewidth=0.5, label='{} Apertures'.format(namedict[shapes[i]]))
+        plt.plot(specindex_xflux, specindex2_yflux, '--', color='k', label='Spectral Index = 2')
+        plt.plot(specindex_xflux, specindex3_yflux, '--', color='purple', label='Spectral Index = 3')
+        if label:
+            for i in range(len(shapes)):
+                for j, label in enumerate(marker_labels):
+                    plt.annotate(label, (flux_band1[i][j], flux_band2[i][j]), size=8)
+        if log:
+            plt.xlabel('Log Band {} Flux'.format(band1))
+            plt.ylabel('Log Band {} Flux'.format(band2))
+            plt.xscale('log')
+            plt.yscale('log')
+        else:
+            plt.xlabel('Band {} Flux'.format(band1))
+            plt.ylabel('Band {} Flux'.format(band2))
+        plt.legend()
+    
+    plt.suptitle('Flux v. Flux For Region {} In Bands {} and {}'.format(region, band1, band2))
+    # ------------------
     
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Produce a flux flux plot with spectral indices for any number of aperture shapes')
+    parser.add_argument('region', metavar='region', type=str, help='name of the region as listed in "imgfileinfo.dat"')
+    parser.add_argument('bands', metavar='bands', type=int, nargs='+', help='integers representing the ALMA bands of observation')
+    parser.add_argument('-l', '--log', action='store_true')
+    parser.add_argument('-g', '--grid', action='store_true')
+    parser.add_argument('-n', '--number', action='store_true')
+    args = parser.parse_args()
+    region = str(args.region)
+    bands = sorted(args.bands)
+    log = bool(args.log)
+    grid = bool(args.grid)
+    number = bool(args.number)
+
     region = 'w51e2'
-    ffplot(region, 'circ3', 3, 6, nu3, nu6)
+    ffplot(region, ['ellipse', 'circ1', 'circ2', 'circ3'], bands[0], bands[1], label=number, grid=grid, log=log)
     plt.show()
+    

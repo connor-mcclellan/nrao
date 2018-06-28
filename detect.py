@@ -99,7 +99,7 @@ if __name__ == '__main__':
     region = str(args.region)
     band = args.band
     
-    infilename, _, _, min_value, delta_fraction, min_npix = grabfileinfo(region, band)
+    infilename, _, _, min_value, delta_fraction, min_npix, _, _ = grabfileinfo(region, band)
 
     print("Min value: ", min_value)
     print("Min delta: {:.5g}".format(min_value*delta_fraction))

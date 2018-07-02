@@ -5,18 +5,20 @@ import regions
 import astropy.units as u
 from astropy import coordinates
 from astropy.nddata.utils import Cutout2D, NoOverlapError
-from utils import rms, mask, apsum, grabfileinfo
+from utils import rms, mask, apsum, grabfileinfo, plot_grid
 import argparse
 import numpy as np
 from astropy import wcs
 import radio_beam
 from astropy.utils.console import ProgressBar
+import matplotlib.pyplot as plt
 
 def flux(region):
 
     # import the catalog file, get names of bands
     filename = glob('./cat/mastercat_region{}*'.format(region))[0]
     catalog = Table(Table.read(filename, format='ascii'), masked=True)
+    catalog.sort('_idx')
     
     bands = np.array(filename.split('bands_')[1].split('.dat')[0].split('_'), dtype=int)
     n_bands = len(bands)
@@ -61,11 +63,16 @@ def flux(region):
         circ2_rms_col = MaskedColumn(length=len(catalog), name='circ2_rms_band{}'.format(band), mask=True)
         circ3_rms_col = MaskedColumn(length=len(catalog), name='circ3_rms_band{}'.format(band), mask=True)
         
-        circ1_r, circ2_r, circ3_r = 10, 15, 25
+        circ1_r, circ2_r, circ3_r = 5e-6*u.deg, 1e-5*u.deg, 1.5e-5*u.deg
         
         print('Photometering sources')
         pb = ProgressBar(len(catalog[np.where(catalog['rejected']==0)]))
         
+        masks = []
+        datacube = []
+        rejects = []
+        snr_vals = []
+        names = []
         
         # Iterate over sources, extracting ellipse parameters
         for j in range(n_rows):
@@ -80,8 +87,8 @@ def flux(region):
             minor = source['minor_fwhm']*u.deg
             pa = source['position_angle']*u.deg
             
-            annulus_width = 15
-            center_distance = 10
+            annulus_width = 1e-5*u.deg
+            center_distance = 1e-5*u.deg
             
             # Convert to pixel coordinates
             position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
@@ -90,22 +97,24 @@ def flux(region):
             pix_minor = minor/pixel_scale
             
             # Create cutout
-            size = np.max([circ3_r*pixel_scale.value, major.value])*2.2*u.deg
+            size = np.max([circ3_r.value, major.value+center_distance.value+annulus_width.value])*2.2*u.deg
             try:
                 cutout = Cutout2D(data, position, size, mywcs, mode='partial')
             except NoOverlapError:
+                catalog['rejected'][j] = 1
                 pb.update()
                 continue
             cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
+            datacube.append(cutout.data)
             
             # create all aperture shapes
             ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major*2., pix_minor*2., angle=pa)
-            circ1_reg = regions.CirclePixelRegion(cutout_center, circ1_r)
-            circ2_reg = regions.CirclePixelRegion(cutout_center, circ2_r)
-            circ3_reg = regions.CirclePixelRegion(cutout_center, circ3_r)
+            circ1_reg = regions.CirclePixelRegion(cutout_center, circ1_r/pixel_scale)
+            circ2_reg = regions.CirclePixelRegion(cutout_center, circ2_r/pixel_scale)
+            circ3_reg = regions.CirclePixelRegion(cutout_center, circ3_r/pixel_scale)
             
-            innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major)
-            outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major+annulus_width)
+            innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance/pixel_scale+pix_major)
+            outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance/pixel_scale+pix_major+annulus_width/pixel_scale)
             
             annulus_mask = mask(outerann_reg, cutout) - mask(innerann_reg, cutout)
             
@@ -117,6 +126,10 @@ def flux(region):
             
             annulus_rms = rms(cutout.data[annulus_mask.astype('bool')])
             annulus_median = np.median(cutout.data[annulus_mask.astype('bool')])
+            
+            # Add grid plot mask to list
+            masklist = [ellipse_mask, annulus_mask, circ1_mask, circ2_mask, circ3_mask]
+            masks.append(masklist)
             
             # add fluxes to appropriate columns
             peak_flux_col[j] = peak_flux
@@ -134,12 +147,23 @@ def flux(region):
             annulus_rms_col[j] = annulus_rms
             
             catalog['snr_band'+str(band)][j] = peak_flux/annulus_rms
+            snr_vals.append(peak_flux/annulus_rms)
+            names.append(catalog['_idx'][j])
             
+            # Secondary rejection
+            rejected = 0
             lowest_flux = np.min([ellipse_flux, circ1_flux, circ2_flux, circ3_flux])
             if lowest_flux <= annulus_median*ellipse_npix or lowest_flux < 0:
                 catalog['rejected'][j] = 1
                 n_rejected += 1
+                rejected = 1
+            rejects.append(rejected)
             pb.update()
+    
+        # Plot the grid of sources
+        plot_grid(datacube, masks, rejects, snr_vals, names)
+        plt.suptitle('region={}, band={}'.format(region, band))  
+        plt.show(block=False)
     
         # add columns to catalog
         catalog.add_columns([peak_flux_col,
@@ -163,5 +187,6 @@ if __name__ == '__main__':
     region = str(args.region)
 
     flux(region)
+    input("Press enter to terminate.")
 
 

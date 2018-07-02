@@ -73,8 +73,8 @@ def reject(imfile, catfile, threshold):
         position_angle = catalog['position_angle'][i] * u.deg
         dend_flux = catalog['dend_flux_band{}'.format(band)][i]
         
-        annulus_width = 15 #* u.pix
-        center_distance = 10 #* u.pix
+        annulus_width = 1e-5*u.deg
+        center_distance = 1e-5*u.deg
         
         # Define some ellipse properties in pixel coordinates
         position = coordinates.SkyCoord(x_cen, y_cen, frame='icrs', unit=(u.deg,u.deg))
@@ -83,15 +83,15 @@ def reject(imfile, catfile, threshold):
         pix_minor_fwhm = minor_fwhm/pixel_scale
         
         # Cutout section of the image we care about, to speed up computation time
-        size = ((center_distance+annulus_width)*pixel_scale+major_fwhm)*2.2
+        size = (center_distance+annulus_width+major_fwhm)*2.2
         cutout = Cutout2D(data, position, size, mywcs, mode='partial')
         cutout_center = regions.PixCoord(cutout.center_cutout[0], cutout.center_cutout[1])
         
         # Define the aperture regions needed for SNR
         ellipse_reg = regions.EllipsePixelRegion(cutout_center, pix_major_fwhm*2., pix_minor_fwhm*2., angle=position_angle) # Make sure you're running the dev version of regions, otherwise the position angles will be in radians!
         
-        innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm)
-        outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance+pix_major_fwhm+annulus_width)
+        innerann_reg = regions.CirclePixelRegion(cutout_center, center_distance/pixel_scale+pix_major_fwhm)
+        outerann_reg = regions.CirclePixelRegion(cutout_center, center_distance/pixel_scale+pix_major_fwhm+annulus_width/pixel_scale)
         
         # Make masks from aperture regions
         ellipse_mask = mask(ellipse_reg, cutout)
@@ -99,8 +99,7 @@ def reject(imfile, catfile, threshold):
         
         # Plot annulus and ellipse regions
         data_cube.append(cutout.data)
-        graph_mask = deepcopy(annulus_mask) + ellipse_mask
-        masks.append(graph_mask)
+        masks.append([annulus_mask, ellipse_mask])
         
         # Calculate the SNR and aperture flux sums
         bg_rms = rms(cutout.data[annulus_mask.astype('bool')])

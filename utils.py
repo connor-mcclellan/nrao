@@ -52,7 +52,8 @@ def plot_grid(datacube, masks, rejects, snr_vals, names):
             plt.imshow(image, origin='lower', cmap='gray')
         else:
             plt.imshow(image, origin='lower')
-        plt.imshow(masks[i], origin='lower', cmap='gray', alpha=0.2)
+        for j in range(len(masks[i])):
+            plt.imshow(masks[i][j], origin='lower', cmap='gray', alpha=0.1)
         plt.text(0, 0, '{}  SN {:.1f}'.format(names[i], snr_vals[i]), fontsize=7, color='w')
         plt.xticks([])
         plt.yticks([])

@@ -3,7 +3,7 @@ import astropy.units as u
 import numpy as np
 import time
 from copy import deepcopy
-from utils import commonbeam, savereg, grabcatname
+from utils import commonbeam, savereg, grabcatname, grabbands
 from astropy.utils.console import ProgressBar
 import argparse
 
@@ -113,7 +113,9 @@ def make_master_cat(catfilelist):
     # Save catalog and region files
     current_table.sort('y_cen')
     current_table.write('./cat/mastercat_region{}_bands{}.dat'.format(region, bandstring), format='ascii')
-    savereg(current_table, './reg/masterreg_region{}_bands{}.reg'.format(region, bandstring))
+    
+    index = list(set(range(len(current_table)))^set(np.where(current_table['rejected']==1)[0]))
+    savereg(current_table[index], './reg/masterreg_region{}_bands{}.reg'.format(region, bandstring))
         
 
 if __name__ == '__main__':

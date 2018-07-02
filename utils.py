@@ -17,7 +17,7 @@ def grabfileinfo(region, band):
     return tuple(info[0])
 
 def grabcatname(region, band, flag=''):
-    _, region, band, val, delt_frac, pix = grabfileinfo(region, band)
+    _, region, band, val, delt_frac, pix, _, _= grabfileinfo(region, band)
     if flag:
         catfile = './cat/cat_region{}_band{}_val{}_delt{:.5g}_pix{}_{}.dat'.format(region, band, val, delt_frac*val, pix, flag)
     else:

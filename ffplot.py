@@ -1,9 +1,8 @@
-from utils import grabfileinfo
+from utils import grabfileinfo, filter_masked
 from astropy.table import Table
 import matplotlib.pyplot as plt
 import numpy as np
 from glob import glob
-import matplotlib.gridspec as gs
 import argparse
 
 # Dendrogram (abandoned code, rework in if shape=='dendrogram')

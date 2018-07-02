@@ -17,7 +17,7 @@ namedict = {
 }
 
 def specindex(nu1, nu2, f1, alpha):
-    return f1*(nu2/nu1)**(1/alpha)
+    return f1*(nu2/nu1)**(alpha)
 
 
 def ffplot(region, shapes, band1, band2, log=True, label=True, grid=True, peak=True):

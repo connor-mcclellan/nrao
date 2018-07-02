@@ -13,7 +13,7 @@ namedict = {
 }
 
 def specindex(nu1, nu2, f1, f2):
-    return np.log(nu1/nu2)/np.log(f1/f2)
+    return np.log(f1/f2)/np.log(nu1/nu2)
 
 def hist(region, bands, shapes):
 
@@ -37,9 +37,10 @@ def hist(region, bands, shapes):
     for l, shape in enumerate(shapes):
         ax = fig.add_subplot(1, 2, l+1)
         print(nu3, nu6, flux_array[0][l][0]/flux_array[1][l][0], specindex(nu3, nu6, flux_array[0][l][0], flux_array[1][l][0]))
-        n, bins, patches = ax.hist(specindex(nu3, nu6, flux_array[0][l], flux_array[1][l]), bins=np.linspace(0, 4, 10), color=colors[0])
+        n, bins, patches = ax.hist(specindex(nu3, nu6, flux_array[0][l], flux_array[1][l]), bins=np.linspace(1, 5, 10), color=colors[0])
         ax.set_title('{} Apertures'.format(namedict[shapes[l]]))
         ax.set_xlabel('Alpha')
+        ax.set_xlim([1, 5])
         #ax.set_xscale('log')
         ax.set_ylabel('n')
     plt.suptitle('Alpha Parameter For Sources In Region {} In Bands {}'.format(region, bands))

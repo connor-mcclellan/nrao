@@ -16,8 +16,8 @@ namedict = {
     'circ3':'Large Circular'            
 }
 
-def specindex(nu1, nu2, f2, alpha):
-    return f2*(nu1/nu2)**alpha
+def specindex(nu1, nu2, f1, alpha):
+    return f1*(nu2/nu1)**(1/alpha)
 
 
 def ffplot(region, shapes, band1, band2, log=True, label=True, grid=True):
@@ -44,8 +44,8 @@ def ffplot(region, shapes, band1, band2, log=True, label=True, grid=True):
     marker_labels = t['_idx']
     
     specindex_xflux = np.linspace(np.min(flux_band1), np.max(flux_band1), 10)
-    specindex2_yflux = specindex(nu2, nu1, specindex_xflux, 2)
-    specindex3_yflux = specindex(nu2, nu1, specindex_xflux, 3)
+    specindex2_yflux = specindex(nu1, nu2, specindex_xflux, 2)
+    specindex3_yflux = specindex(nu1, nu2, specindex_xflux, 3)
 
     # ------ PLOTTING ------
     if grid:

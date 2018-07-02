@@ -43,3 +43,4 @@
 - Trying to find where both "detected_bandX" fields are true returns all the rows of the master catalog.
     - [SOLVED] The "detected_bandX" columns are now binary (0 or 1) instead of boolean (True or False). The astropy table was storing the boolean as a string ('True' or 'Fals'), so that if you say `np.where(table['detected_bandX'])`, it would find data in every field since they're all strings, and return everywhere.
 - Values for alpha calculated from fluxes/nus don't match up with values of alpha indicated by where the data fall on the flux/flux plot
+    - [SOLVED] In `ffplot.py`, the equation for flux in the second band was `f2 = f1*(nu2/nu1)**alpha`, when it should have been `f2 = f1*(nu2/nu1)**(1/alpha)`. 

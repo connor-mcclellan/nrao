@@ -17,7 +17,17 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def reject(imfile, catfile, threshold):
-
+    """Reject noisy detections.
+    
+    Parameters
+    ----------
+    imfile : str
+        The path to the radio image file
+    catfile : str
+        The path to the source catalog, as obtained from detect.py
+    threshold : float
+        The signal-to-noise threshold below which sources are rejected
+    """
     # Extract information from filename
     outfile = os.path.basename(catfile).split('cat_')[1].split('.dat')[0]
     region = outfile.split('region')[1].split('_band')[0]

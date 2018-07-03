@@ -28,20 +28,26 @@ def hist(region, bands, shapes):
     n_images = len(shapes)
     xplots = int(np.around(np.sqrt(n_images)))
     yplots = xplots
-    fig = plt.figure(figsize=(12, 12))
+    fig = plt.figure(figsize=(6, 6))
     
     for l, shape in enumerate(shapes):
         ax = fig.add_subplot(xplots, yplots, l+1)
         for k, band in enumerate(bands):
             n, bins, patches = ax.hist(flux_array[k][l], bins=np.logspace(-5, 0, 20), alpha=0.5, color=colors[k+3], label='Band {}'.format(band))
         ax.set_title('{} Apertures'.format(namedict[shapes[l]]))
-        ax.set_ylim(bottom=0, top=10)
+        ax.set_ylim(bottom=0, top=12)
         ax.set_xlabel('log10(Flux) (Jy)')
         ax.set_xscale('log')
         ax.set_ylabel('n')
         ax.legend()
     plt.suptitle('Flux Histograms For Region {} In Bands {}'.format(region, bands))
-    plt.subplots_adjust(top=0.917, bottom=0.063, left=0.052, right=0.985, hspace=0.234, wspace=0.129)
-            
-hist('w51e2', [3, 6], ['ellipse', 'circ1', 'circ2', 'circ3'])
-plt.show()
+    plt.subplots_adjust(top=0.897,
+bottom=0.108,
+left=0.052,
+right=0.985,
+hspace=0.409,
+wspace=0.219)
+
+if __name__ == '__main__':
+    hist('w51e2', [3, 6], ['ellipse', 'circ1', 'circ2', 'circ3'])
+    plt.show()

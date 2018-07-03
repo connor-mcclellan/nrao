@@ -153,7 +153,8 @@ def flux(region):
             # Secondary rejection
             rejected = 0
             lowest_flux = np.min([ellipse_flux, circ1_flux, circ2_flux, circ3_flux])
-            if lowest_flux <= annulus_median*ellipse_npix or lowest_flux < 0:
+            #if lowest_flux <= annulus_median*ellipse_npix or lowest_flux < 0:
+            if lowest_flux < 0:
                 catalog['rejected'][j] = 1
                 n_rejected += 1
                 rejected = 1

@@ -24,10 +24,13 @@
      - [X] Include error bars
      - [X] Log scale
  - [X] Incorporate 'rejected' and 'accepted' as columns in the source catalog, so that sources can be rejected at any point in the procedure
- - [X] Reject sources that have aperture sum lower than `annulus_median*aperture_npix`
- - [ ] 
- - [ ] Use final master catalog to create flux histograms
+ - [X] Reject sources that have negative aperture sums
+ - [X] Use final master catalog to create flux histograms
+ - [ ] Rewrite as an object-oriented Astropy package
+ - [ ] Improve detection / rejection algorithms to reduce number of high-eccentricity ellipses
+ - [ ] Add centroiding, to ensure circular apertures are centered on the source
  - [ ] Repeat analysis on W51IRS2, AKA W51n
+
 
 ## Bugs
  - SNR for noise is higher than actual sources

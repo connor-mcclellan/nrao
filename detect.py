@@ -34,12 +34,8 @@ def detect(infile, region, band, min_value=0.000325, min_delta=0.0005525, min_np
             'wcs':mywcs,
             }
     
-    cat = pp_catalog(d, metadata)                       # set up position-position catalog
-    leaves = []
-    for i in range(len(d.leaves)):
-        leaves.append(d.leaves[i].idx)
-    cat = cat[leaves]                                   # Use only leaves
-    cat['_idx'] = range(len(cat['_idx']))               # Reassign star ids to be continuous
+    cat = pp_catalog(d.leaves, metadata)    # set up position-position catalog
+    cat['_idx'] = range(len(cat))
     
     # Use FWHM for ellipse dimensions instead of sigma
     cat['major_sigma'] = cat['major_sigma']*np.sqrt(8*np.log(2))

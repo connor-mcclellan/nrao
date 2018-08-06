@@ -1,0 +1,3 @@
+filename region band min_value delta_fraction min_npix nu ppbeam
+/lustre/aoc/students/bmcclell/w51/w51e2_sci.spw0_1_2_3_4_5_6_7_8_9_10_11_12_13_14_15_16_17_18_19.mfs.I.manual.image.tt0.pbcor.fits.gz w51e2 3 0.00015 1.7 7.5 92982346121.92 125.0926865069147
+/lustre/aoc/students/bmcclell/w51/W51e2_cont_briggsSC_tclean.image.fits.gz w51e2 6 0.000325 1.7 7.5 226092028953.4 101.7249966753436

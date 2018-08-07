@@ -10,9 +10,9 @@ from collections import OrderedDict
 e = Table.read('/users/bmcclell/nrao/cat/w51e_external_photometered.dat', format='ascii')
 
 
-rs1 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/W51e2_cont_briggsSC_tclean.image.fits.gz'))
-rs2 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/W51e2_band3_93GHz_adjustedRADEC.fits'))
-rs3 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/W51e2w_QbandAarray_adjustedRADEC.fits'))
+rs1 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/e1e2/W51e2_cont_briggsSC_tclean.image.fits.gz'))
+rs2 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/e1e2/W51e2_band3_93GHz_adjustedRADEC.fits'))
+rs3 = dendrocat.RadioSource(fits.open('/users/bmcclell/Data/e1e2/W51e2w_QbandAarray_adjustedRADEC.fits'))
 
 rs3.nu = 45.0*u.GHz
 rs3.freq_id = '45.0GHz'
